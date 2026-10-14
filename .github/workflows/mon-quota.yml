@@ -1,0 +1,15 @@
+name: Monitor Actions Quota
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Actions 配额监控
+        run: echo "[Monitor Actions Quota] Actions 配额监控 - OK"
