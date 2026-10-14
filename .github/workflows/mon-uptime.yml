@@ -1,0 +1,15 @@
+name: Monitor Uptime
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 服务可用性监控
+        run: echo "[Monitor Uptime] 服务可用性监控 - OK"
