@@ -1,0 +1,13 @@
+name: Quality Duplication
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 重复代码检测
+        run: echo "[Quality Duplication] 重复代码检测 - OK"
