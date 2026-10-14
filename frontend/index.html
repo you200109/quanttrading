@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantTrading - 量化交易可视化交互系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航栏 -->
+        <header class="top-bar">
+            <div class="logo">QuantTrading</div>
+            <div class="nav-controls">
+                <select id="instIdSelect" class="control-select">
+                    <option value="BTC-USDT">BTC-USDT</option>
+                    <option value="ETH-USDT">ETH-USDT</option>
+                    <option value="SOL-USDT">SOL-USDT</option>
+                    <option value="BNB-USDT">BNB-USDT</option>
+                    <option value="XRP-USDT">XRP-USDT</option>
+                </select>
+                <div class="period-tabs">
+                    <button class="period-btn active" data-bar="15m">15m</button>
+                    <button class="period-btn" data-bar="30m">30m</button>
+                    <button class="period-btn" data-bar="1H">1H</button>
+                    <button class="period-btn" data-bar="4H">4H</button>
+                </div>
+                <div class="mode-switch">
+                    <button id="simModeBtn" class="mode-btn active">模拟盘</button>
+                    <button id="liveModeBtn" class="mode-btn">实盘</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主体内容区 -->
+        <div class="main-content">
+            <!-- 左侧：K线图表区 -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <span id="tickerInfo" class="ticker-info">--</span>
+                    <div class="indicator-selector">
+                        <button id="addIndicatorBtn" class="btn-small">+ 添加指标</button>
+                        <div id="indicatorPanel" class="indicator-panel hidden">
+                            <input type="text" id="indicatorSearch" placeholder="搜索指标..." class="indicator-search">
+                            <div id="indicatorList" class="indicator-list"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="klineChart" class="kline-chart"></div>
+                <div id="indicatorChart" class="indicator-chart"></div>
+            </div>
+
+            <!-- 右侧：盘口 + 交易面板 -->
+            <div class="right-panel">
+                <!-- 盘口深度 -->
+                <div class="orderbook-section">
+                    <h3>盘口深度</h3>
+                    <div class="orderbook-header">
+                        <span>价格</span><span>数量</span><span>总额</span>
+                    </div>
+                    <div id="asksList" class="asks-list"></div>
+                    <div id="midPrice" class="mid-price">--</div>
+                    <div id="bidsList" class="bids-list"></div>
+                </div>
+
+                <!-- 交易面板 -->
+                <div class="trade-panel">
+                    <h3>交易面板</h3>
+                    <div class="trade-form">
+                        <div class="form-row">
+                            <label>方向</label>
+                            <div class="side-buttons">
+                                <button id="buyBtn" class="side-btn buy">买入</button>
+                                <button id="sellBtn" class="side-btn sell">卖出</button>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label>类型</label>
+                            <select id="ordTypeSelect" class="control-select">
+                                <option value="limit">限价</option>
+                                <option value="market">市价</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label>价格</label>
+                            <input type="number" id="priceInput" class="control-input" step="0.01">
+                        </div>
+                        <div class="form-row">
+                            <label>数量</label>
+                            <input type="number" id="sizeInput" class="control-input" step="0.001">
+                        </div>
+                        <button id="placeOrderBtn" class="btn-primary">下单</button>
+                    </div>
+                </div>
+
+                <!-- 策略参数配置 -->
+                <div class="strategy-panel">
+                    <h3>策略参数配置</h3>
+                    <div class="strategy-form">
+                        <div class="form-row">
+                            <label>策略选择</label>
+                            <select id="strategySelect" class="control-select">
+                                <option value="ma_cross">均线交叉</option>
+                                <option value="rsi_oversold">RSI 超卖</option>
+                                <option value="bbands_break">布林带突破</option>
+                                <option value="macd_divergence">MACD 背离</option>
+                            </select>
+                        </div>
+                        <div id="strategyParams" class="strategy-params"></div>
+                        <button id="runBacktestBtn" class="btn-secondary">运行回测</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部：交易数据面板 -->
+        <div class="bottom-panel">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="pending">挂单</button>
+                <button class="tab-btn" data-tab="history">历史委托</button>
+                <button class="tab-btn" data-tab="fills">成交明细</button>
+                <button class="tab-btn" data-tab="bills">账单流水</button>
+            </div>
+            <div class="tab-content">
+                <div id="pendingTab" class="tab-pane active">
+                    <table class="data-table"><thead><tr>
+                        <th>时间</th><th>产品</th><th>方向</th><th>类型</th>
+                        <th>价格</th><th>数量</th><th>已成交</th><th>状态</th><th>操作</th>
+                    </tr></thead><tbody id="pendingBody"></tbody></table>
+                </div>
+                <div id="historyTab" class="tab-pane hidden">
+                    <table class="data-table"><thead><tr>
+                        <th>时间</th><th>产品</th><th>方向</th><th>类型</th>
+                        <th>价格</th><th>数量</th><th>已成交</th><th>均价</th><th>状态</th>
+                    </tr></thead><tbody id="historyBody"></tbody></table>
+                </div>
+                <div id="fillsTab" class="tab-pane hidden">
+                    <table class="data-table"><thead><tr>
+                        <th>时间</th><th>产品</th><th>方向</th><th>成交价</th><th>成交量</th><th>手续费</th><th>成交ID</th>
+                    </tr></thead><tbody id="fillsBody"></tbody></table>
+                </div>
+                <div id="billsTab" class="tab-pane hidden">
+                    <table class="data-table"><thead><tr>
+                        <th>时间</th><th>类型</th><th>币种</th><th>金额</th><th>余额</th><th>账单ID</th>
+                    </tr></thead><tbody id="billsBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
