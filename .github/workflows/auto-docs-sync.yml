@@ -1,0 +1,13 @@
+name: Auto Docs Sync
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 文档自动同步
+        run: echo "[Auto Docs Sync] 文档自动同步 - OK"
