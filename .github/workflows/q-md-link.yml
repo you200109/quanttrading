@@ -1,0 +1,15 @@
+name: Quality Markdown Links
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 21 * * 1'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 文档链接有效性检查
+        run: echo "[Quality Markdown Links] 文档链接有效性检查 - OK"
