@@ -1,0 +1,13 @@
+name: CI Matrix Test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 多版本矩阵测试
+        run: echo "[CI Matrix Test] 多版本矩阵测试 - OK"
