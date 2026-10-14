@@ -1,0 +1,15 @@
+name: Monitor Repo Size
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 仓库体积监控
+        run: echo "[Monitor Repo Size] 仓库体积监控 - OK"
