@@ -1,0 +1,13 @@
+name: Auto Release Draft
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 自动起草发布说明
+        run: echo "[Auto Release Draft] 自动起草发布说明 - OK"
