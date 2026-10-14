@@ -1,13 +1,21 @@
 name: Release Tag
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag (e.g. v1.0.1)'
+        required: true
 permissions:
-  contents: read
+  contents: write
 jobs:
-  main:
+  tag:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: 自动打版本标签
-        run: echo "[Release Tag] 自动打版本标签 - OK"
+      - name: Create tag
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag ${{ inputs.version }}
+          git push origin ${{ inputs.version }}
