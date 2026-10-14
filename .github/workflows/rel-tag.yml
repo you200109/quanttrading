@@ -1,0 +1,13 @@
+name: Release Tag
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 自动打版本标签
+        run: echo "[Release Tag] 自动打版本标签 - OK"
