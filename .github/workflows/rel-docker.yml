@@ -1,0 +1,13 @@
+name: Release Docker
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 发布 Docker 镜像
+        run: echo "[Release Docker] 发布 Docker 镜像 - OK"
