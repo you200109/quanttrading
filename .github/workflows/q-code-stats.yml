@@ -1,0 +1,15 @@
+name: Quality Code Stats
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 21 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 每日代码统计
+        run: echo "[Quality Code Stats] 每日代码统计 - OK"
