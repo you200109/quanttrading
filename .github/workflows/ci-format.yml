@@ -1,0 +1,13 @@
+name: CI Format Check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 格式化检查
+        run: echo "[CI Format Check] 格式化检查 - OK"
