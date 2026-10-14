@@ -1,13 +1,23 @@
 name: CI Smoke Test
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 permissions:
   contents: read
 jobs:
-  main:
+  smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 冒烟测试
-        run: echo "[CI Smoke Test] 冒烟测试 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install minimal deps
+        run: pip install fastapi uvicorn python-dotenv
+      - name: Start server and health check
+        run: |
+          python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
+          sleep 8
+          curl -s http://127.0.0.1:8000/health | grep -q 'ok' && echo 'Health check PASSED' || (echo 'Health check FAILED' && exit 1)
