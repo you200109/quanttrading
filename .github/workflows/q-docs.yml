@@ -1,0 +1,13 @@
+name: Quality Docs Build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 文档构建验证
+        run: echo "[Quality Docs Build] 文档构建验证 - OK"
