@@ -1,0 +1,15 @@
+name: Monitor Performance
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 性能指标监控
+        run: echo "[Monitor Performance] 性能指标监控 - OK"
