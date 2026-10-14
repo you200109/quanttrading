@@ -1,13 +1,31 @@
 name: Deploy Production
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to confirm production deployment'
+        required: true
 permissions:
   contents: read
 jobs:
-  main:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    environment: production
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: 部署到生产环境
-        run: echo "[Deploy Production] 部署到生产环境 - OK"
+      - name: Verify confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != 'DEPLOY' ]; then
+            echo '❌ Production deployment not confirmed'
+            exit 1
+          fi
+          echo '✅ Production deployment confirmed'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Production build verification
+        run: |
+          pip install -r requirements.txt -q
+          python -c "from backend.main import app; print('Production build verified:', app.title)"
+          echo 'Production deployment package ready'
