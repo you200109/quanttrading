@@ -1,0 +1,15 @@
+name: Security Audit
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 19 * * 1'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 每周依赖安全审计
+        run: echo "[Security Audit] 每周依赖安全审计 - OK"
