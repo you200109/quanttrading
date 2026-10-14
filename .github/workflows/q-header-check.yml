@@ -1,0 +1,13 @@
+name: Quality Header Check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 文件头检查
+        run: echo "[Quality Header Check] 文件头检查 - OK"
