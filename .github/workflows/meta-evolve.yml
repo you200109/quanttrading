@@ -1,0 +1,302 @@
+name: Meta Evolve - Self Evolution Engine
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每 6 小时进化一次
+  workflow_dispatch:       # 支持手动触发进化
+
+permissions:
+  contents: write          # 修改工作流文件和进化日志
+  actions: read            # 读取工作流运行历史
+  issues: write            # 创建进化报告 Issue
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # ==================== 阶段 1：自动学习 ====================
+      - name: Phase 1 - Learn (Search GitHub for new knowledge)
+        id: learn
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Phase 1: Learning from GitHub ==="
+          
+          # 学习 1：检查核心 Actions 的最新版本
+          python3 << 'PYEOF'
+          import requests, os, json
+          token = os.environ['GH_TOKEN']
+          headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+          
+          # 检查当前使用的核心 Actions 是否有新版本
+          core_actions = [
+              'actions/checkout',
+              'actions/setup-python',
+              'actions/upload-artifact',
+              'actions/cache',
+              'github/codeql-action',
+              'actions/stale',
+              'actions/labeler',
+          ]
+          
+          learnings = []
+          for action in core_actions:
+              try:
+                  resp = requests.get(f'https://api.github.com/repos/{action}/releases/latest', headers=headers, timeout=10)
+                  if resp.status_code == 200:
+                      latest = resp.json().get('tag_name', 'unknown')
+                      learnings.append(f'{action}: latest={latest}')
+                      print(f'  {action} latest version: {latest}')
+              except Exception as e:
+                  print(f'  {action} check failed: {e}')
+          
+          # 学习 2：搜索新的优质量化交易工具
+          search_terms = ['okx trading python', 'quantitative trading framework', 'technical analysis python']
+          new_tools = []
+          for term in search_terms:
+              try:
+                  resp = requests.get(
+                      f'https://api.github.com/search/repositories?q={term}&sort=stars&order=desc&per_page=3&sort=updated',
+                      headers=headers, timeout=10
+                  )
+                  if resp.status_code == 200:
+                      for item in resp.json().get('items', []):
+                          new_tools.append({
+                              'name': item['full_name'],
+                              'stars': item['stargazers_count'],
+                              'updated': item['updated_at'][:10],
+                              'desc': (item.get('description') or '')[:60],
+                          })
+              except Exception as e:
+                  print(f'  Search {term} failed: {e}')
+          
+          # 保存学习结果
+          with open('/tmp/learnings.json', 'w') as f:
+              json.dump({'action_versions': learnings, 'new_tools': new_tools[:10]}, f, indent=2)
+          print(f'
+Learned: {len(learnings)} action versions, {len(new_tools)} new tools')
+          PYEOF
+
+      # ==================== 阶段 2：自动反省 ====================
+      - name: Phase 2 - Reflect (Analyze own workflow performance)
+        id: reflect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Phase 2: Reflecting on own performance ==="
+          
+          python3 << 'PYEOF'
+          import requests, os, json
+          token = os.environ['GH_TOKEN']
+          repo = os.environ['GITHUB_REPOSITORY']
+          headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+          
+          # 获取最近的工作流运行记录
+          resp = requests.get(
+              f'https://api.github.com/repos/{repo}/actions/runs?per_page=50',
+              headers=headers, timeout=15
+          )
+          
+          if resp.status_code != 200:
+              print('Failed to get workflow runs')
+              exit(0)
+          
+          runs = resp.json().get('workflow_runs', [])
+          total = len(runs)
+          success = len([r for r in runs if r.get('conclusion') == 'success'])
+          failed = len([r for r in runs if r.get('conclusion') == 'failure'])
+          
+          # 统计失败的工作流
+          failure_stats = {}
+          for r in runs:
+              if r.get('conclusion') == 'failure':
+                  name = r.get('name', 'unknown')
+                  failure_stats[name] = failure_stats.get(name, 0) + 1
+          
+          # 统计平均耗时
+          durations = [r.get('run_duration', 0) for r in runs if r.get('run_duration')]
+          avg_duration = sum(durations) / len(durations) if durations else 0
+          
+          reflection = {
+              'total_runs': total,
+              'success_rate': round(success / total * 100, 1) if total else 0,
+              'failed_count': failed,
+              'failure_hotspots': failure_stats,
+              'avg_duration_sec': round(avg_duration, 1),
+          }
+          
+          print(f"  Total runs analyzed: {total}")
+          print(f"  Success rate: {reflection['success_rate']}%")
+          print(f"  Failed: {failed}")
+          print(f"  Avg duration: {reflection['avg_duration_sec']}s")
+          if failure_hotspots := reflection['failure_hotspots']:
+              print(f"  Failure hotspots: {failure_hotspots}")
+          
+          with open('/tmp/reflection.json', 'w') as f:
+              json.dump(reflection, f, indent=2)
+          PYEOF
+
+      # ==================== 阶段 3：自我升级决策 ====================
+      - name: Phase 3 - Decide (Identify upgrades and generate changes)
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Phase 3: Deciding on self-upgrades ==="
+          
+          python3 << 'PYEOF'
+          import json, os
+          
+          with open('/tmp/learnings.json') as f:
+              learnings = json.load(f)
+          with open('/tmp/reflection.json') as f:
+              reflection = json.load(f)
+          
+          upgrades = []
+          
+          # 决策 1：Actions 版本升级建议
+          for info in learnings['action_versions']:
+              action, latest = info.split(': latest=')
+              upgrades.append(f'Consider upgrading {action} to {latest}')
+          
+          # 决策 2：失败热点处理
+          for wf_name, fail_count in reflection['failure_hotspots'].items():
+              if fail_count >= 3:
+                  upgrades.append(f'WARNING: {wf_name} failed {fail_count} times - needs investigation')
+          
+          # 决策 3：新工具集成建议
+          for tool in learnings['new_tools'][:5]:
+              upgrades.append(f"New tool discovered: {tool['name']} ({tool['stars']} stars) - {tool['desc']}")
+          
+          decision = {
+              'upgrades': upgrades,
+              'reflection': reflection,
+              'learnings_summary': {
+                  'actions_checked': len(learnings['action_versions']),
+                  'tools_found': len(learnings['new_tools']),
+              },
+          }
+          
+          with open('/tmp/decision.json', 'w') as f:
+              json.dump(decision, f, indent=2)
+          
+          print(f"  Generated {len(upgrades)} upgrade recommendations")
+          for u in upgrades[:10]:
+              print(f"    - {u}")
+          PYEOF
+
+      # ==================== 阶段 4：自我升级执行 ====================
+      - name: Phase 4 - Evolve (Apply self-upgrades via API)
+        id: evolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Phase 4: Applying self-upgrades ==="
+          
+          python3 << 'PYEOF'
+          import requests, os, json, base64
+          from datetime import datetime, timezone
+          
+          token = os.environ['GH_TOKEN']
+          repo = os.environ['GITHUB_REPOSITORY']
+          headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+          
+          with open('/tmp/decision.json') as f:
+              decision = json.load(f)
+          
+          now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+          
+          # ---- 自我升级 1：更新进化日志 ----
+          log_entry = f"
+## Evolution Cycle - {now}
+
+"
+          log_entry += f"- Runs analyzed: {decision['reflection']['total_runs']}
+"
+          log_entry += f"- Success rate: {decision['reflection']['success_rate']}%
+"
+          log_entry += f"- Upgrades identified: {len(decision['upgrades'])}
+"
+          for u in decision['upgrades'][:8]:
+              log_entry += f"  - {u}
+"
+          
+          log_path = 'docs/evolution-log.md'
+          resp = requests.get(f'https://api.github.com/repos/{repo}/contents/{log_path}', headers=headers, timeout=15)
+          
+          if resp.status_code == 200:
+              # 更新现有日志
+              existing = base64.b64decode(resp.json()['content']).decode()
+              if not existing.startswith('# Evolution Log'):
+                  existing = '# Evolution Log
+
+This document tracks the self-evolution history of the workflow system.
+' + existing
+              new_content = existing + log_entry
+              data = {
+                  'message': f'evolve: evolution cycle {now}',
+                  'content': base64.b64encode(new_content.encode()).decode(),
+                  'sha': resp.json()['sha'],
+              }
+          else:
+              # 创建新日志
+              new_content = '# Evolution Log
+
+This document tracks the self-evolution history of the workflow system.
+' + log_entry
+              data = {
+                  'message': f'evolve: initial evolution log {now}',
+                  'content': base64.b64encode(new_content.encode()).decode(),
+              }
+          
+          put_resp = requests.put(f'https://api.github.com/repos/{repo}/contents/{log_path}', headers=headers, json=data, timeout=20)
+          print(f"  Evolution log update: {'OK' if put_resp.status_code in [200, 201] else 'FAIL ' + str(put_resp.status_code)}")
+          
+          # ---- 自我升级 2：创建进化报告 Issue ----
+          issue_body = f"""## Self-Evolution Report - {now}
+          
+          ### Reflection Data
+          - Total runs analyzed: {decision['reflection']['total_runs']}
+          - Success rate: {decision['reflection']['success_rate']}%
+          - Average duration: {decision['reflection']['avg_duration_sec']}s
+          
+          ### Upgrade Recommendations
+          """
+          for u in decision['upgrades']:
+              issue_body += f"- {u}
+"
+          
+          issue_body += "
+*This issue was automatically generated by the Meta Evolve engine.*"
+          
+          issue_resp = requests.post(
+              f'https://api.github.com/repos/{repo}/issues',
+              headers=headers,
+              json={
+                  'title': f'🧬 Evolution Report - {now}',
+                  'body': issue_body,
+                  'labels': ['evolution', 'auto-generated'],
+              },
+              timeout=15,
+          )
+          print(f"  Evolution report issue: {'OK' if issue_resp.status_code == 201 else 'FAIL ' + str(issue_resp.status_code)}")
+          
+          print('
+=== Evolution cycle complete ===')
+          PYEOF
+
+      # ==================== 阶段 5：进化摘要 ====================
+      - name: Phase 5 - Summary
+        run: |
+          echo "# 🧬 Evolution Cycle Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## What was done:" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Learned**: Checked latest Actions versions, discovered new quant tools" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Reflected**: Analyzed recent workflow runs, identified failure patterns" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Decided**: Generated upgrade recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "4. **Evolved**: Updated evolution log, created evolution report issue" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Next evolution cycle runs in 6 hours." >> $GITHUB_STEP_SUMMARY
