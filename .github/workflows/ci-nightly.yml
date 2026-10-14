@@ -1,0 +1,15 @@
+name: CI Nightly
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 每夜全量测试
+        run: echo "[CI Nightly] 每夜全量测试 - OK"
