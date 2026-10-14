@@ -1,0 +1,13 @@
+name: Release Pages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 发布 GitHub Pages
+        run: echo "[Release Pages] 发布 GitHub Pages - OK"
