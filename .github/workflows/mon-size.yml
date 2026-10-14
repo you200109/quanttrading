@@ -1,15 +1,22 @@
 name: Monitor Repo Size
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 2 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  size:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: 仓库体积监控
-        run: echo "[Monitor Repo Size] 仓库体积监控 - OK"
+      - name: Check repo size
+        run: |
+          SIZE=$(du -sh --exclude=.git . | cut -f1)
+          echo "Repository content size: $SIZE"
+          if [ $(du -s --exclude=.git . | cut -f1) -gt 1000000 ]; then
+            echo '⚠️ Repository exceeds 1GB, consider cleanup'
+          else
+            echo '✅ Repository size is healthy'
+          fi
