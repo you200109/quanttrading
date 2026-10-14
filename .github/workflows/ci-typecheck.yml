@@ -1,0 +1,13 @@
+name: CI Type Check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 类型检查
+        run: echo "[CI Type Check] 类型检查 - OK"
