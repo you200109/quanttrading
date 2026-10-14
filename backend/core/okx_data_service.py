@@ -7,6 +7,7 @@ OKX 数据服务核心模块
 import os
 import json
 import asyncio
+import threading
 import websockets
 import requests
 from dotenv import load_dotenv
@@ -22,7 +23,10 @@ class OKXDataService:
     """OKX 交易所数据服务"""
 
     SUPPORTED_BAR = ['15m', '30m', '1H', '4H']
-    WS_PUBLIC_URL = 'wss://ws.okx.com:8443/ws/v5/public'
+
+    @property
+    def ws_public_url(self):
+        return f'wss://ws.{self.api_host}:8443/ws/v5/public'
 
     def __init__(self, simulated=True):
         self.simulated = simulated
@@ -101,7 +105,7 @@ class OKXDataService:
 
     async def start_public_ws(self, inst_id='BTC-USDT', on_data_callback=None):
         """启动公共 WebSocket 实时数据推送"""
-        url = self.WS_PUBLIC_URL
+        url = self.ws_public_url
         ws = await self._ws_connect(url)
         self._ws_clients['public'] = ws
 
@@ -140,12 +144,15 @@ class OKXDataService:
             await self.stop_ws(key)
 
 
-# 单例
+# 线程安全单例
 _data_service = None
+_data_service_lock = threading.Lock()
 
 
 def get_data_service(simulated=True):
     global _data_service
     if _data_service is None:
-        _data_service = OKXDataService(simulated=simulated)
+        with _data_service_lock:
+            if _data_service is None:
+                _data_service = OKXDataService(simulated=simulated)
     return _data_service
