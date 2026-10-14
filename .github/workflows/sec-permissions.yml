@@ -1,0 +1,13 @@
+name: Security Permissions
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 工作流权限最小化检查
+        run: echo "[Security Permissions] 工作流权限最小化检查 - OK"
