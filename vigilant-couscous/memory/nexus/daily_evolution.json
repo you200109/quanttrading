@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-13",
+  "best_params": {
+    "rsi_period": 33,
+    "stop_loss": 0.08,
+    "sma_fast": 6,
+    "sma_slow": 40,
+    "rsi_overbought": 46.7635,
+    "take_profit": 0.349,
+    "rsi_oversold": 21.3195
+  },
+  "best_fitness": 47.9145,
+  "test_fitness": 0.05,
+  "generations": 200,
+  "today_learned": [
+    "短线动量突破"
+  ],
+  "total_knowledge": 2
+}

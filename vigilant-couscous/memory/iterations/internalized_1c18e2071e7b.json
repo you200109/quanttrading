@@ -1,0 +1,17 @@
+{
+  "id": "1c18e2071e7b",
+  "params": {
+    "rsi_oversold": 15.280607878731502,
+    "stop_loss": 0.0711216146797309,
+    "take_profit": 0.2113898657721553,
+    "rsi_period": 27.411154989491237,
+    "sma_slow": 39.10788852418896,
+    "rsi_overbought": 52.21198948512576,
+    "sma_fast": 6.205091286031474
+  },
+  "fitness": 48.60510457744446,
+  "generation": 149,
+  "internalized_at": "2026-10-13T08:26:21.864246",
+  "internalization_stage": "completed",
+  "days_to_internalize": 7
+}

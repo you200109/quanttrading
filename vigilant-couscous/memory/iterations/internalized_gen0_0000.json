@@ -1,0 +1,17 @@
+{
+  "id": "gen0_0000",
+  "params": {
+    "rsi_period": 17,
+    "sma_fast": 4,
+    "sma_slow": 45,
+    "stop_loss": 0.11723092181529998,
+    "take_profit": 0.26609400403859773,
+    "rsi_oversold": 25,
+    "rsi_overbought": 73
+  },
+  "fitness": 0.1,
+  "generation": 0,
+  "internalized_at": "2026-10-13T08:12:04.566456",
+  "internalization_stage": "completed",
+  "days_to_internalize": 7
+}

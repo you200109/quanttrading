@@ -1,0 +1,67 @@
+{
+  "iteration": 1,
+  "start_time": "2026-10-13T11:17:08.750036",
+  "last_update": "2026-10-13T11:17:09.002131",
+  "trade_count": 3,
+  "portfolio": {
+    "capital": 100000,
+    "available_capital": 62645.3328,
+    "position_value": 0.0,
+    "total_value": 62645.3328,
+    "total_pnl": 0.0,
+    "total_return": -0.373546672,
+    "position_count": 3,
+    "positions": {
+      "BTC/USDT": {
+        "quantity": 0.16671136464124436,
+        "avg_price": 82777.8,
+        "current_price": 0.0,
+        "pnl": 0.0
+      },
+      "ETH/USDT": {
+        "quantity": 4.999113975030205,
+        "avg_price": 2483.0,
+        "current_price": 0.0,
+        "pnl": 0.0
+      },
+      "SOL/USDT": {
+        "quantity": 104.70695611314727,
+        "avg_price": 106.41,
+        "current_price": 0.0,
+        "pnl": 0.0
+      }
+    }
+  },
+  "recent_trades": [
+    {
+      "time": "2026-10-13T11:17:08.840593",
+      "symbol": "BTC/USDT",
+      "side": "buy",
+      "quantity": 0.166711,
+      "price": 82777.8,
+      "recommendation": "买入",
+      "confidence": 0.38,
+      "live_order_id": "demo_1791861428"
+    },
+    {
+      "time": "2026-10-13T11:17:08.920125",
+      "symbol": "ETH/USDT",
+      "side": "buy",
+      "quantity": 4.999114,
+      "price": 2483.0,
+      "recommendation": "强烈买入",
+      "confidence": 0.44,
+      "live_order_id": "demo_1791861428"
+    },
+    {
+      "time": "2026-10-13T11:17:09.000131",
+      "symbol": "SOL/USDT",
+      "side": "buy",
+      "quantity": 104.706956,
+      "price": 106.41,
+      "recommendation": "强烈买入",
+      "confidence": 0.51,
+      "live_order_id": "demo_1791861429"
+    }
+  ]
+}

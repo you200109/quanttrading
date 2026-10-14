@@ -1,0 +1,181 @@
+{
+  "discovered": {
+    "tool": [
+      {
+        "full_name": "VarunKesarwani/VarunKesarwani",
+        "name": "VarunKesarwani",
+        "category": "tool",
+        "stars": 0,
+        "language": null,
+        "description": "run Gupta  Senior Technical Lead · Enterprise Solution Architect  C# / .NET · Distributed Systems · Azure · Edge & Cloud Platforms · AI Systems  📍 Chennai, India · 🌍 Open to relocation LinkedIn · GitH",
+        "topics": [],
+        "url": "https://github.com/VarunKesarwani/VarunKesarwani",
+        "found_at": "2026-10-13T10:44:17.180521"
+      }
+    ],
+    "indicator": [
+      {
+        "full_name": "VarunKesarwani/VarunKesarwani",
+        "name": "VarunKesarwani",
+        "category": "indicator",
+        "stars": 0,
+        "language": null,
+        "description": "run Gupta  Senior Technical Lead · Enterprise Solution Architect  C# / .NET · Distributed Systems · Azure · Edge & Cloud Platforms · AI Systems  📍 Chennai, India · 🌍 Open to relocation LinkedIn · GitH",
+        "topics": [],
+        "url": "https://github.com/VarunKesarwani/VarunKesarwani",
+        "found_at": "2026-10-13T10:44:18.640734"
+      }
+    ],
+    "strategy": [
+      {
+        "full_name": "Dormiglione/trader-data.realtimedatainfra",
+        "name": "trader-data.realtimedatainfra",
+        "category": "strategy",
+        "stars": 0,
+        "language": null,
+        "description": "A toolkit for applying generative AI, large language models (LLMs), and machine learning to trading and financial data analysis. Includes Python and Go utilities for data collection, strategy experime",
+        "topics": [],
+        "url": "https://github.com/Dormiglione/trader-data.realtimedatainfra",
+        "found_at": "2026-10-13T10:44:25.963599"
+      },
+      {
+        "full_name": "VarunKesarwani/VarunKesarwani",
+        "name": "VarunKesarwani",
+        "category": "strategy",
+        "stars": 0,
+        "language": null,
+        "description": "run Gupta  Senior Technical Lead · Enterprise Solution Architect  C# / .NET · Distributed Systems · Azure · Edge & Cloud Platforms · AI Systems  📍 Chennai, India · 🌍 Open to relocation LinkedIn · GitH",
+        "topics": [],
+        "url": "https://github.com/VarunKesarwani/VarunKesarwani",
+        "found_at": "2026-10-13T10:44:26.512309"
+      }
+    ],
+    "param": [
+      {
+        "full_name": "s-k-28/nq-es-trader-5k-payout",
+        "name": "nq-es-trader-5k-payout",
+        "category": "param",
+        "stars": 25,
+        "language": "Python",
+        "description": "NQ quantitative trading system — 9-model MNQ ensemble with walk-forward validation, funded account optimization, and interactive dashboards",
+        "topics": [],
+        "url": "https://github.com/s-k-28/nq-es-trader-5k-payout",
+        "found_at": "2026-10-13T10:44:36.898073"
+      },
+      {
+        "full_name": "shoemoney/shoemoneyx",
+        "name": "shoemoneyx",
+        "category": "param",
+        "stars": 25,
+        "language": "PHP",
+        "description": "SMX · an open-source crypto paper-trading desk. Backtest farm, walk-forward optimizer, built-in AI agent, 110 exchanges, schema v2 strategies.",
+        "topics": [
+          "algo-trading",
+          "backtesting",
+          "ccxt",
+          "coinbase",
+          "crypto",
+          "laravel",
+          "open-source",
+          "paper-trading",
+          "trading",
+          "vue"
+        ],
+        "url": "https://github.com/shoemoney/shoemoneyx",
+        "found_at": "2026-10-13T10:44:37.529274"
+      },
+      {
+        "full_name": "TonyMa1/walk-forward-backtester",
+        "name": "walk-forward-backtester",
+        "category": "param",
+        "stars": 12,
+        "language": "Python",
+        "description": "A Python implementation of Walk Forward Optimization (WFO) for trading strategy backtesting with Bayesian Optimization",
+        "topics": [],
+        "url": "https://github.com/TonyMa1/walk-forward-backtester",
+        "found_at": "2026-10-13T10:44:38.035986"
+      },
+      {
+        "full_name": "ranjeet867/Metatrader",
+        "name": "Metatrader",
+        "category": "param",
+        "stars": 10,
+        "language": "Python",
+        "description": "Production-grade MetaTrader 5 quant trading platform for FTMO and prop-firm traders. Reconciliation-gated backtester, autonomous portfolio optimizer, walk-forward + Monte-Carlo pass-rate simulation, a",
+        "topics": [
+          "algorithmic-trading",
+          "backtest",
+          "ftmo",
+          "metatrader5",
+          "mt5",
+          "prop-firm",
+          "python",
+          "quant-trading-framework",
+          "streamlit",
+          "trading-bot"
+        ],
+        "url": "https://github.com/ranjeet867/Metatrader",
+        "found_at": "2026-10-13T10:44:38.476678"
+      },
+      {
+        "full_name": "harveybc/heuristic-strategy",
+        "name": "heuristic-strategy",
+        "category": "param",
+        "stars": 7,
+        "language": "Python",
+        "description": "Heuristic trading strategy lab: Backtrader backtesting, DEAP genetic optimization, walk-forward analysis and a reusable contract-typed trade-lifecycle policy",
+        "topics": [
+          "algorithmic-trading",
+          "backtesting",
+          "backtrader",
+          "cryptocurrency",
+          "deap",
+          "evolutionary-algorithms",
+          "forex",
+          "genetic-algorithm",
+          "machine-learning",
+          "optimization",
+          "plugin-architecture",
+          "python",
+          "quantitative-finance",
+          "research",
+          "simulation",
+          "strategy",
+          "time-series",
+          "trading",
+          "trading-strategies",
+          "walk-forward-analysis"
+        ],
+        "url": "https://github.com/harveybc/heuristic-strategy",
+        "found_at": "2026-10-13T10:44:39.617628"
+      },
+      {
+        "full_name": "ypeng12/Quant.ai",
+        "name": "Quant.ai",
+        "category": "param",
+        "stars": 7,
+        "language": "Python",
+        "description": "An advanced, fully-automated algorithmic trading system and backtest simulator featuring dynamic market regime routing, real-time K-line pattern recognition, ATR-based risk sizing, and walk-forward op",
+        "topics": [],
+        "url": "https://github.com/ypeng12/Quant.ai",
+        "found_at": "2026-10-13T10:44:40.373960"
+      }
+    ]
+  },
+  "history": [
+    {
+      "time": "2026-10-13T10:57:05.522182",
+      "static_added": 0,
+      "discovered": {
+        "tool": 0,
+        "indicator": 0,
+        "strategy": 0,
+        "param": 0
+      },
+      "params_added": 0,
+      "total_repos": 0,
+      "total_resources": 10
+    }
+  ],
+  "last_update": "2026-10-13T10:57:05.522182"
+}

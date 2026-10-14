@@ -1,0 +1,84 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "代码检查 (ruff)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/ruff",
+      "args": ["check", "."],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "代码格式化 (black)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/black",
+      "args": ["."],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "导入排序 (isort)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/isort",
+      "args": ["."],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "类型检查 (mypy)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/mypy",
+      "args": [".", "--ignore-missing-imports"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "运行全部测试",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/pytest",
+      "args": ["-v", "--cov=.", "--cov-report=term"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "启动 Web 控制台",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python",
+      "args": ["web_console.py"],
+      "group": "none",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "启动自动交易（单次）",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python",
+      "args": ["auto_trade.py", "--once"],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "进化优化（单次）",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python",
+      "args": ["unified_evolve.py", "once"],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "完整检查 (ruff + mypy + pytest)",
+      "dependsOrder": "sequence",
+      "dependsOn": ["代码检查 (ruff)", "类型检查 (mypy)", "运行全部测试"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "格式化全部代码",
+      "dependsOrder": "sequence",
+      "dependsOn": ["导入排序 (isort)", "代码格式化 (black)"],
+      "group": "none",
+      "problemMatcher": []
+    }
+  ]
+}

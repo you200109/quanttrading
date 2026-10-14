@@ -1,0 +1,152 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "启动主程序",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": []
+    },
+    {
+      "name": "进化循环模式",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["--evolve"]
+    },
+    {
+      "name": "回测模式",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["--backtest"]
+    },
+    {
+      "name": "自动交易（单次）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/auto_trade.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["--once"]
+    },
+    {
+      "name": "自动交易（循环）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/auto_trade.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["--loop"]
+    },
+    {
+      "name": "Web 控制台",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/web_console.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "统一进化（单次）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/unified_evolve.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["once"]
+    },
+    {
+      "name": "统一进化（每日）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/unified_evolve.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["daily"]
+    },
+    {
+      "name": "统一进化（每周）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/unified_evolve.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "args": ["weekly"]
+    },
+    {
+      "name": "GitHub 策略扫描",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/github_scanner.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "运行当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "pytest 当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["-v", "${file}"]
+    },
+    {
+      "name": "pytest 全部测试",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["-v", "--cov=.", "--cov-report=term"]
+    }
+  ]
+}

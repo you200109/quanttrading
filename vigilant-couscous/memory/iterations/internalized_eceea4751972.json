@@ -1,0 +1,17 @@
+{
+  "id": "eceea4751972",
+  "params": {
+    "rsi_oversold": 37.67712454075785,
+    "take_profit": 0.051975423650024395,
+    "rsi_period": 7.002773407180926,
+    "stop_loss": 0.04287808468855756,
+    "sma_slow": 68.94309273677356,
+    "sma_fast": 11.532547325207934,
+    "rsi_overbought": 73.13186675504262
+  },
+  "fitness": 0.6194656352101916,
+  "generation": 35,
+  "internalized_at": "2026-10-13T10:59:30.363668",
+  "internalization_stage": "completed",
+  "days_to_internalize": 7
+}

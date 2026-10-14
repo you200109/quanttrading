@@ -1,0 +1,28 @@
+{
+  "best_params": {
+    "stop_loss": 0.1479,
+    "sma_fast": 19,
+    "take_profit": 0.3894,
+    "rsi_period": 28,
+    "sma_slow": 31,
+    "rsi_overbought": 53.4471,
+    "rsi_oversold": 17.6922
+  },
+  "best_fitness": 12.1028,
+  "test_fitness": 0.05,
+  "generations": 117,
+  "gh_seeds_used": 5,
+  "fitness_history": [
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028,
+    12.1028
+  ],
+  "timestamp": "2026-10-13T08:15:50.875289"
+}

@@ -1,0 +1,29 @@
+{
+  "history": [
+    {
+      "time": "2026-10-13T10:57:28.400707",
+      "mode": "weekly",
+      "learn": {
+        "ok": true,
+        "discovered": 0,
+        "params_added": 0
+      },
+      "evolve": {
+        "ok": true,
+        "fitness": 10856.0229,
+        "params": {
+          "sma_fast": 6,
+          "rsi_oversold": 23.3757,
+          "rsi_period": 30,
+          "stop_loss": 0.0853,
+          "take_profit": 0.1253,
+          "sma_slow": 81,
+          "rsi_overbought": 75.8575
+        }
+      },
+      "version": "0.1.3",
+      "hot_reloaded": []
+    }
+  ],
+  "total": 1
+}

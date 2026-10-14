@@ -1,0 +1,15 @@
+{
+  "mode": "once",
+  "timestamp": "2026-10-13T11:25:33.085442",
+  "best_params": {
+    "rsi_oversold": 25,
+    "sma_fast": 11,
+    "stop_loss": 0.1309,
+    "take_profit": 0.2501,
+    "sma_slow": 24,
+    "rsi_overbought": 65,
+    "rsi_period": 23
+  },
+  "best_fitness": 0.615,
+  "generations": 82
+}

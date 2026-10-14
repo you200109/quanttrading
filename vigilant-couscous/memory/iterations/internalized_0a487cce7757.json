@@ -1,0 +1,15 @@
+{
+  "id": "0a487cce7757",
+  "params": {
+    "take_profit": 0.25523131417216566,
+    "stop_loss": 0.05587082507390901,
+    "rsi_period": 13.545652103997295,
+    "sma_slow": 19.768415486997828,
+    "sma_fast": 5.039084779011795
+  },
+  "fitness": 1.0323736515492563,
+  "generation": 11,
+  "internalized_at": "2026-10-13T07:23:55.868442",
+  "internalization_stage": "completed",
+  "days_to_internalize": 7
+}

@@ -1,0 +1,1490 @@
+{
+  "timestamp": "2026-10-13T09:31:14.820620",
+  "total_strategies": 68,
+  "positive_strategies": 8,
+  "top10": [
+    {
+      "total_return": 0.03522026533258148,
+      "trades": 14,
+      "win_rate": 0.5714285714285714,
+      "sharpe": 4.882299194763163,
+      "max_dd": 0.08060534650256918,
+      "name": "Strategy003",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "rsi_period": 0,
+        "sma_fast": 5,
+        "sma_slow": 10,
+        "timeframe": "5m",
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.02325322183697688,
+      "trades": 7,
+      "win_rate": 0.8571428571428571,
+      "sharpe": 6.9730358873350005,
+      "max_dd": 0.10210986042424365,
+      "name": "InformativeSample",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 20,
+        "sma_slow": 50,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.02325322183697688,
+      "trades": 7,
+      "win_rate": 0.8571428571428571,
+      "sharpe": 6.9730358873350005,
+      "max_dd": 0.10210986042424365,
+      "name": "Strategy001",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 20,
+        "sma_slow": 50,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.02325322183697688,
+      "trades": 7,
+      "win_rate": 0.8571428571428571,
+      "sharpe": 6.9730358873350005,
+      "max_dd": 0.10210986042424365,
+      "name": "Strategy001_custom_exit",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 20,
+        "sma_slow": 50,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.018570445141991514,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": 4.506126433737115,
+      "max_dd": 0.06535022389040739,
+      "name": "Strategy002",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "rsi_period": 0,
+        "timeframe": "5m",
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.018570445141991514,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": 4.506126433737115,
+      "max_dd": 0.06535022389040739,
+      "name": "Strategy005",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "rsi_period": 0,
+        "timeframe": "5m",
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.012046465993416204,
+      "trades": 2,
+      "win_rate": 0.5,
+      "sharpe": 14.885260317853815,
+      "max_dd": 0.0,
+      "name": "berlinguyinca/MultiRSI",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "sma_fast": 5,
+        "sma_slow": 200,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.010185633134674571,
+      "trades": 2,
+      "win_rate": 0.5,
+      "sharpe": 5.555849675679735,
+      "max_dd": 0.0,
+      "name": "TrendRiderStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.06,
+        "rsi_period": 40,
+        "sma_fast": 50,
+        "sma_slow": 50,
+        "timeframe": "1h",
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0003994939804976457,
+      "trades": 4,
+      "win_rate": 0.5,
+      "sharpe": -0.06492335290721049,
+      "max_dd": 0.085451691112571,
+      "name": "berlinguyinca/ClucMay72018",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "sma_fast": 100,
+        "sma_slow": 100,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.002698209029035643,
+      "trades": 14,
+      "win_rate": 0.5,
+      "sharpe": -0.1555599661085324,
+      "max_dd": 0.2579474360252366,
+      "name": "hlhb",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.3211,
+        "sma_fast": 5,
+        "sma_slow": 10,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    }
+  ],
+  "all_results": [
+    {
+      "total_return": 0.03522026533258148,
+      "trades": 14,
+      "win_rate": 0.5714285714285714,
+      "sharpe": 4.882299194763163,
+      "max_dd": 0.08060534650256918,
+      "name": "Strategy003",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "rsi_period": 0,
+        "sma_fast": 5,
+        "sma_slow": 10,
+        "timeframe": "5m",
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.02325322183697688,
+      "trades": 7,
+      "win_rate": 0.8571428571428571,
+      "sharpe": 6.9730358873350005,
+      "max_dd": 0.10210986042424365,
+      "name": "InformativeSample",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 20,
+        "sma_slow": 50,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.02325322183697688,
+      "trades": 7,
+      "win_rate": 0.8571428571428571,
+      "sharpe": 6.9730358873350005,
+      "max_dd": 0.10210986042424365,
+      "name": "Strategy001",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 20,
+        "sma_slow": 50,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.02325322183697688,
+      "trades": 7,
+      "win_rate": 0.8571428571428571,
+      "sharpe": 6.9730358873350005,
+      "max_dd": 0.10210986042424365,
+      "name": "Strategy001_custom_exit",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 20,
+        "sma_slow": 50,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.018570445141991514,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": 4.506126433737115,
+      "max_dd": 0.06535022389040739,
+      "name": "Strategy002",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "rsi_period": 0,
+        "timeframe": "5m",
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.018570445141991514,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": 4.506126433737115,
+      "max_dd": 0.06535022389040739,
+      "name": "Strategy005",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "rsi_period": 0,
+        "timeframe": "5m",
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.012046465993416204,
+      "trades": 2,
+      "win_rate": 0.5,
+      "sharpe": 14.885260317853815,
+      "max_dd": 0.0,
+      "name": "berlinguyinca/MultiRSI",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "sma_fast": 5,
+        "sma_slow": 200,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": 0.010185633134674571,
+      "trades": 2,
+      "win_rate": 0.5,
+      "sharpe": 5.555849675679735,
+      "max_dd": 0.0,
+      "name": "TrendRiderStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.06,
+        "rsi_period": 40,
+        "sma_fast": 50,
+        "sma_slow": 50,
+        "timeframe": "1h",
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0003994939804976457,
+      "trades": 4,
+      "win_rate": 0.5,
+      "sharpe": -0.06492335290721049,
+      "max_dd": 0.085451691112571,
+      "name": "berlinguyinca/ClucMay72018",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "sma_fast": 100,
+        "sma_slow": 100,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.002698209029035643,
+      "trades": 14,
+      "win_rate": 0.5,
+      "sharpe": -0.1555599661085324,
+      "max_dd": 0.2579474360252366,
+      "name": "hlhb",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.3211,
+        "sma_fast": 5,
+        "sma_slow": 10,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.01644298402068147,
+      "trades": 15,
+      "win_rate": 0.2,
+      "sharpe": -3.186620577024452,
+      "max_dd": 0.2087732031321571,
+      "name": "berlinguyinca/Low_BB",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.015,
+        "timeframe": "1m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.017908867192733886,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -2.4548529371949126,
+      "max_dd": 0.20745709021240716,
+      "name": "AlmgrenChrissStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "timeframe": "15m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.017908867192733886,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -2.4548529371949126,
+      "max_dd": 0.20745709021240716,
+      "name": "multi_tf",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.017908867192733886,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -2.4548529371949126,
+      "max_dd": 0.20745709021240716,
+      "name": "TWAPStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "timeframe": "15m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.017908867192733886,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -2.4548529371949126,
+      "max_dd": 0.20745709021240716,
+      "name": "berlinguyinca/ReinforcedSmoothScalp",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "timeframe": "1m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.01815370637651751,
+      "trades": 6,
+      "win_rate": 0.5,
+      "sharpe": -3.2251359823364094,
+      "max_dd": 0.17704322855106389,
+      "name": "Strategy004",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.1,
+        "sma_fast": 5,
+        "sma_slow": 5,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "Bandtastic",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.345,
+        "timeframe": "15m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "FixedRiskRewardLoss",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.9,
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "GodStra",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.34549,
+        "timeframe": "12h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "HourBasedStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.292,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "MultiMa",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.345,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "PatternRecognition",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.288,
+        "timeframe": "1d",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "PowerTower",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.288,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "SwingHighToSky",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.34338,
+        "timeframe": "15m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "UniversalMACD",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.318,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/ASDTSRockwellTrading",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.3,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/BinHV27",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.5,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/DoesNothingStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 1.0,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/Freqtrade_backtest_validation_freqtrade1",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.9,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/MACDStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.3,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/MACDStrategy_crossed",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.3,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "berlinguyinca/SmoothScalp",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.5,
+        "timeframe": "1m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018654768875243026,
+      "trades": 7,
+      "win_rate": 0.5714285714285714,
+      "sharpe": -2.569180839610748,
+      "max_dd": 0.1734655659582478,
+      "name": "futures/VolatilitySystem",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 1.0,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "Heracles",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.256,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/ADXMomentum",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/AdxSmas",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/AwesomeMacd",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/BbandRsi",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/CofiBitStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/Quickie",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "berlinguyinca/Simple",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.25,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.018823632951331094,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.2664874975514455,
+      "max_dd": 0.17346556593870868,
+      "name": "lookahead_bias/Zeus",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.256,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.020256495100200847,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.527942693702457,
+      "max_dd": 0.17346556592199994,
+      "name": "CustomStoplossWithPSAR",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.2,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.020256495100200847,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.527942693702457,
+      "max_dd": 0.17346556592199994,
+      "name": "berlinguyinca/AverageStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.2,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.020256495100200847,
+      "trades": 8,
+      "win_rate": 0.625,
+      "sharpe": -2.527942693702457,
+      "max_dd": 0.17346556592199994,
+      "name": "berlinguyinca/ReinforcedAverageStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.2,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.02202626944008225,
+      "trades": 14,
+      "win_rate": 0.21428571428571427,
+      "sharpe": -4.133449760088263,
+      "max_dd": 0.24441055290883676,
+      "name": "berlinguyinca/CCIStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.02,
+        "timeframe": "1m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.024791612698059906,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -3.177087242563556,
+      "max_dd": 0.2546824496404641,
+      "name": "mabStra",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.128,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.024791612698059906,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -3.177087242563556,
+      "max_dd": 0.2546824496404641,
+      "name": "lookahead_bias/GodStraNew",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.128,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.024791612698059906,
+      "trades": 10,
+      "win_rate": 0.5,
+      "sharpe": -3.177087242563556,
+      "max_dd": 0.2546824496404641,
+      "name": "lookahead_bias/wtc",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.128,
+        "timeframe": "30m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "BreakEven",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/BinHV45",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "1m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/CMCWinner",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "15m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/CombinedBinHAndCluc",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/EMASkipPump",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/ReinforcedQuickie",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/Scalp",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.04,
+        "timeframe": "1m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/SmoothOperator",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/TDSequentialStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "berlinguyinca/TechnicalExampleStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "futures/FAdxSmaStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "futures/FReinforcedStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.0257881884374714,
+      "trades": 13,
+      "win_rate": 0.3076923076923077,
+      "sharpe": -3.859046092337052,
+      "max_dd": 0.3113375385156532,
+      "name": "futures/FSampleStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.05,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.031202398106860638,
+      "trades": 8,
+      "win_rate": 0.5,
+      "sharpe": -3.7989780434347034,
+      "max_dd": 0.18096723866525297,
+      "name": "Supertrend",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.265,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.031202398106860638,
+      "trades": 8,
+      "win_rate": 0.5,
+      "sharpe": -3.7989780434347034,
+      "max_dd": 0.18096723866525297,
+      "name": "futures/FOttStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.265,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.031202398106860638,
+      "trades": 8,
+      "win_rate": 0.5,
+      "sharpe": -3.7989780434347034,
+      "max_dd": 0.18096723866525297,
+      "name": "futures/FSupertrendStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.265,
+        "timeframe": "1h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.031202398106860638,
+      "trades": 8,
+      "win_rate": 0.5,
+      "sharpe": -3.7989780434347034,
+      "max_dd": 0.18096723866525297,
+      "name": "futures/TrendFollowingStrategy",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.265,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.033662841872574206,
+      "trades": 8,
+      "win_rate": 0.5,
+      "sharpe": -3.9550079504427265,
+      "max_dd": 0.18096723860019434,
+      "name": "Diamond",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.271,
+        "timeframe": "5m",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    },
+    {
+      "total_return": -0.033662841872574206,
+      "trades": 8,
+      "win_rate": 0.5,
+      "sharpe": -3.9550079504427265,
+      "max_dd": 0.18096723860019434,
+      "name": "lookahead_bias/DevilStra",
+      "params": {
+        "source": "freqtrade-strategies",
+        "stop_loss": 0.28,
+        "timeframe": "4h",
+        "rsi_period": 14,
+        "sma_fast": 5,
+        "sma_slow": 20,
+        "take_profit": 0.15,
+        "rsi_oversold": 30,
+        "rsi_overbought": 70
+      }
+    }
+  ]
+}

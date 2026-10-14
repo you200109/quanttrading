@@ -1,0 +1,36 @@
+{
+  "version": "0.1.3",
+  "total_evolutions": 1,
+  "last_evolved": "2026-10-13T08:28:44.838697",
+  "history": [
+    {
+      "version": "0.1.1",
+      "date": "2026-10-13",
+      "week": "2026-W41",
+      "fitness": 30.2217,
+      "test_fitness": 0.05,
+      "generations": 120,
+      "params": {
+        "rsi_oversold": 20.5446,
+        "take_profit": 0.1934,
+        "stop_loss": 0.1034,
+        "sma_fast": 9,
+        "rsi_overbought": 51.599,
+        "sma_slow": 25,
+        "rsi_period": 34
+      },
+      "learned_from": [
+        "短线动量突破"
+      ]
+    },
+    {
+      "version": "0.1.2",
+      "time": "2026-10-13T10:57:28.384704"
+    },
+    {
+      "version": "0.1.3",
+      "time": "2026-10-13T10:57:28.390706"
+    }
+  ],
+  "last_updated": "2026-10-13T10:57:28.390706"
+}

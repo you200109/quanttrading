@@ -1,0 +1,55 @@
+# ===== Python 虚拟环境 =====
+.venv/
+venv/
+env/
+
+# ===== Python 缓存 =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== 构建产物 =====
+build/
+dist/
+*.egg-info/
+
+# ===== Flutter 构建 =====
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+
+# ===== 大体积文件 =====
+*.zip
+*.tar.gz
+*.apk
+*.exe
+*.msi
+
+# ===== 日志 =====
+*.log
+reports/*.log
+
+# ===== 备份 =====
+.backups/
+backups/
+*.bak_*
+
+# ===== 密钥与本地配置 =====
+.env
+config_local.py
+
+# ===== 行情缓存 =====
+memory/market_cache/
+memory/gh_cache/
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+nul

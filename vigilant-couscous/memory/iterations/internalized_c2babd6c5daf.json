@@ -1,0 +1,17 @@
+{
+  "id": "c2babd6c5daf",
+  "params": {
+    "rsi_period": 33.60904041870025,
+    "stop_loss": 0.079977582342427,
+    "sma_fast": 6.926970385819432,
+    "sma_slow": 40.761311458152704,
+    "rsi_overbought": 46.76345030458329,
+    "take_profit": 0.34900640472026645,
+    "rsi_oversold": 21.319542080512207
+  },
+  "fitness": 47.91451786031332,
+  "generation": 163,
+  "internalized_at": "2026-10-13T08:22:33.356254",
+  "internalization_stage": "completed",
+  "days_to_internalize": 7
+}
