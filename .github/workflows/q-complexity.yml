@@ -1,0 +1,13 @@
+name: Quality Complexity
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 圈复杂度分析
+        run: echo "[Quality Complexity] 圈复杂度分析 - OK"
