@@ -1,0 +1,13 @@
+name: Release Publish
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 发布发布包
+        run: echo "[Release Publish] 发布发布包 - OK"
