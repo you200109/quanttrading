@@ -1,0 +1,13 @@
+name: CI Test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 单元测试
+        run: echo "[CI Test] 单元测试 - OK"
