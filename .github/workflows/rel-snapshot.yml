@@ -1,0 +1,13 @@
+name: Release Snapshot
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 快照版本发布
+        run: echo "[Release Snapshot] 快照版本发布 - OK"
