@@ -8,6 +8,7 @@ OKX 交易服务模块
 import os
 import json
 import asyncio
+import threading
 import websockets
 import hmac
 import base64
@@ -22,7 +23,13 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 class OKXTradeService:
     """OKX 交易所交易服务"""
 
-    WS_PRIVATE_URL = 'wss://ws.okx.com:8443/ws/v5/private'
+    VALID_SIDES = ['buy', 'sell']
+    VALID_ORD_TYPES = ['limit', 'market', 'post_only', 'fok', 'ioc']
+
+    @property
+    def ws_private_url(self):
+        host = os.getenv('OKX_API_HOST', 'www.okx.com')
+        return f'wss://ws.{host}:8443/ws/v5/private'
 
     def __init__(self, simulated=None):
         self.api_key = os.getenv('OKX_API_KEY', '')
@@ -125,7 +132,15 @@ class OKXTradeService:
     # ==================== 下单 / 撤单 ====================
 
     def place_order(self, inst_id, side, ord_type, sz, px=None, td_mode='cash'):
-        """下单"""
+        """下单（含参数校验）"""
+        if side not in self.VALID_SIDES:
+            return {'code': '1', 'msg': f'Invalid side: {side}, must be one of {self.VALID_SIDES}'}
+        if ord_type not in self.VALID_ORD_TYPES:
+            return {'code': '1', 'msg': f'Invalid ord_type: {ord_type}, must be one of {self.VALID_ORD_TYPES}'}
+        if not inst_id or not sz:
+            return {'code': '1', 'msg': 'inst_id and sz are required'}
+        if ord_type == 'limit' and not px:
+            return {'code': '1', 'msg': 'px is required for limit orders'}
         params = {
             'instId': inst_id,
             'tdMode': td_mode,
@@ -147,7 +162,7 @@ class OKXTradeService:
 
     async def start_private_ws(self, on_data_callback=None):
         """启动私有 WebSocket 实时推送"""
-        url = self.WS_PRIVATE_URL
+        url = self.ws_private_url
         ws = await websockets.connect(url)
         self._ws_private = ws
 
@@ -172,6 +187,8 @@ class OKXTradeService:
         login_resp = await ws.recv()
         login_data = json.loads(login_resp)
         if login_data.get('code') != '0':
+            print(f'Private WS login failed: {login_data.get("msg", "unknown error")}')
+            await ws.close()
             return
 
         channels = [
@@ -201,12 +218,15 @@ class OKXTradeService:
             await self._ws_private.close()
 
 
-# 单例
+# 线程安全单例
 _trade_service = None
+_trade_service_lock = threading.Lock()
 
 
 def get_trade_service(simulated=None):
     global _trade_service
     if _trade_service is None:
-        _trade_service = OKXTradeService(simulated=simulated)
+        with _trade_service_lock:
+            if _trade_service is None:
+                _trade_service = OKXTradeService(simulated=simulated)
     return _trade_service
