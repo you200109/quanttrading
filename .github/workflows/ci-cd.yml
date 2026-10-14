@@ -1,0 +1,249 @@
+name: CI/CD Build Deploy Rollback
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'config/**'
+      - 'requirements.txt'
+      - '.github/workflows/ci-cd.yml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '执行操作'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - rollback
+          - test
+      rollback_version:
+        description: '回滚到的版本标签（仅 rollback 操作时使用）'
+        required: false
+        default: ''
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '20'
+
+jobs:
+  # ==================== 测试 ====================
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action != 'rollback'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest -q
+          if [ -f requirements.txt ]; then pip install -r requirements.txt -q; fi
+
+      - name: Lint with flake8
+        run: |
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 backend/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then pytest tests/ -v; else echo 'No tests directory'; fi
+
+  # ==================== 构建 ====================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    if: success()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate version tag
+        id: version
+        run: |
+          VERSION="v$(date +'%Y%m%d%H%M%S')-${GITHUB_SHA::7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          tar -czf release/quanttrading-${{ steps.version.outputs.version }}.tar.gz \
+            backend/ frontend/ config/ .env.example requirements.txt
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quanttrading-${{ steps.version.outputs.version }}
+          path: release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          files: release/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output version
+        id: output_version
+        run: echo "VERSION=${{ steps.version.outputs.version }}" >> $GITHUB_ENV
+
+  # ==================== 部署 ====================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build
+    if: success() && (github.ref == 'refs/heads/main' || github.event.inputs.action == 'deploy')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -q 2>/dev/null || pip install fastapi uvicorn python-dotenv okx pandas-ta websockets requests -q
+
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deploy_package
+          cp -r backend/ deploy_package/
+          cp -r frontend/ deploy_package/
+          cp -r config/ deploy_package/
+          cp .env.example deploy_package/ 2>/dev/null || true
+          cp requirements.txt deploy_package/ 2>/dev/null || true
+
+      - name: Create deployment script
+        run: |
+          cat > deploy_package/deploy.sh << 'DEPLOY_EOF'
+          #!/bin/bash
+          set -e
+
+          DEPLOY_DIR="/opt/quanttrading"
+          BACKUP_DIR="/opt/quanttrading-backups"
+          VERSION_FILE="$DEPLOY_DIR/.current_version"
+
+          # 创建目录
+          mkdir -p $DEPLOY_DIR $BACKUP_DIR
+
+          # 记录当前版本用于回滚
+          if [ -f "$VERSION_FILE" ]; then
+            CURRENT_VERSION=$(cat $VERSION_FILE)
+            cp -r $DEPLOY_DIR $BACKUP_DIR/backup-$CURRENT_VERSION-$(date +%s)
+            # 保留最近 5 个备份
+            ls -dt $BACKUP_DIR/backup-* | tail -n +6 | xargs rm -rf 2>/dev/null || true
+          fi
+
+          # 部署新版本
+          cp -r backend/ $DEPLOY_DIR/
+          cp -r frontend/ $DEPLOY_DIR/
+          cp -r config/ $DEPLOY_DIR/
+          cp .env.example $DEPLOY_DIR/ 2>/dev/null || true
+          cp requirements.txt $DEPLOY_DIR/ 2>/dev/null || true
+
+          # 重启服务
+          if command -v systemctl &> /dev/null; then
+            systemctl restart quanttrading || true
+          else
+            pkill -f 'uvicorn.*backend.main' || true
+            cd $DEPLOY_DIR
+            nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          fi
+
+          echo "Deployment completed successfully"
+          DEPLOY_EOF
+          chmod +x deploy_package/deploy.sh
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deploy_package/
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: Ready for deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifact: deployment-package" >> $GITHUB_STEP_SUMMARY
+          echo "- Next: Run deploy.sh on target server" >> $GITHUB_STEP_SUMMARY
+
+  # ==================== 回滚 ====================
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'rollback'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create rollback script
+        env:
+          ROLLBACK_VERSION: ${{ github.event.inputs.rollback_version }}
+        run: |
+          cat > rollback.sh << 'ROLLBACK_EOF'
+          #!/bin/bash
+          set -e
+
+          DEPLOY_DIR="/opt/quanttrading"
+          BACKUP_DIR="/opt/quanttrading-backups"
+          ROLLBACK_VERSION="${ROLLBACK_VERSION}"
+
+          echo "Rolling back to version: $ROLLBACK_VERSION"
+
+          # 查找对应备份
+          BACKUP_PATH=$(ls -d $BACKUP_DIR/backup-$ROLLBACK_VERSION-* 2>/dev/null | head -1)
+
+          if [ -z "$BACKUP_PATH" ]; then
+            echo "Error: No backup found for version $ROLLBACK_VERSION"
+            exit 1
+          fi
+
+          # 备份当前版本
+          CURRENT_VERSION=$(cat $DEPLOY_DIR/.current_version 2>/dev/null || echo "unknown")
+          cp -r $DEPLOY_DIR $BACKUP_DIR/backup-$CURRENT_VERSION-rollback-$(date +%s)
+
+          # 恢复备份
+          rm -rf $DEPLOY_DIR/*
+          cp -r $BACKUP_PATH/* $DEPLOY_DIR/
+
+          # 重启服务
+          if command -v systemctl &> /dev/null; then
+            systemctl restart quanttrading || true
+          else
+            pkill -f 'uvicorn.*backend.main' || true
+            cd $DEPLOY_DIR
+            nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          fi
+
+          echo "Rollback to $ROLLBACK_VERSION completed successfully"
+          ROLLBACK_EOF
+          chmod +x rollback.sh
+
+      - name: Upload rollback script
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-script
+          path: rollback.sh
+
+      - name: Rollback summary
+        run: |
+          echo "## Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Target version: ${{ github.event.inputs.rollback_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Script: rollback.sh (download and run on target server)" >> $GITHUB_STEP_SUMMARY
