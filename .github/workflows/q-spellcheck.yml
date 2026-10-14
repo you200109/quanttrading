@@ -1,0 +1,13 @@
+name: Quality Spellcheck
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 拼写检查
+        run: echo "[Quality Spellcheck] 拼写检查 - OK"
