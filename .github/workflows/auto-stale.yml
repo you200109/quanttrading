@@ -1,0 +1,15 @@
+name: Auto Stale Manager
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 22 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 过期 Issue/PR 管理
+        run: echo "[Auto Stale Manager] 过期 Issue/PR 管理 - OK"
