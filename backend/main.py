@@ -5,13 +5,26 @@ FastAPI 主应用入口
 - 启动 WebSocket 端点
 """
 import os
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
 from backend.api.routes import router
+from backend.core.auth import auth_middleware
+
+# 日志系统配置
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('quanttrading.log', encoding='utf-8'),
+    ],
+)
+logger = logging.getLogger('QuantTrading')
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
@@ -29,6 +42,9 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+# API Key 认证中间件
+app.middleware('http')(auth_middleware)
 
 # 挂载路由
 app.include_router(router)
@@ -74,6 +90,7 @@ async def root():
 
 @app.get('/health')
 async def health():
+    logger.info('Health check OK')
     return {'status': 'ok'}
 
 
