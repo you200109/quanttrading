@@ -1,0 +1,13 @@
+name: Release Notify
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 发布通知
+        run: echo "[Release Notify] 发布通知 - OK"
