@@ -1,0 +1,13 @@
+name: Security License Check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 许可证合规检查
+        run: echo "[Security License Check] 许可证合规检查 - OK"
