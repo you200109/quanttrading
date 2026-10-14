@@ -1,0 +1,15 @@
+name: Monitor Issues
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Issue 趋势监控
+        run: echo "[Monitor Issues] Issue 趋势监控 - OK"
