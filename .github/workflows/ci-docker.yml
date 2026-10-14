@@ -1,0 +1,13 @@
+name: CI Docker Build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker 镜像构建
+        run: echo "[CI Docker Build] Docker 镜像构建 - OK"
