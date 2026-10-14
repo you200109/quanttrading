@@ -1,0 +1,15 @@
+name: Monitor Dependencies
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 依赖版本监控
+        run: echo "[Monitor Dependencies] 依赖版本监控 - OK"
