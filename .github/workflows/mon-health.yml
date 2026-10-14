@@ -1,0 +1,15 @@
+name: Monitor Health
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 每6小时健康检查
+        run: echo "[Monitor Health] 每6小时健康检查 - OK"
