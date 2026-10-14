@@ -1,15 +1,15 @@
 name: Security Scorecard
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 20 * * 1'
-permissions:
-  contents: read
+  workflow_dispatch:
+permissions: read-all
 jobs:
-  main:
+  scorecard:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 开源安全评分
-        run: echo "[Security Scorecard] 开源安全评分 - OK"
+      - name: Run OSSF Scorecard
+        uses: ossf/scorecard-action@v2
+        continue-on-error: true
