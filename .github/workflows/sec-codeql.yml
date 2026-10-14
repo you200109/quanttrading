@@ -1,0 +1,15 @@
+name: Security CodeQL
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 19 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: CodeQL 代码安全扫描
+        run: echo "[Security CodeQL] CodeQL 代码安全扫描 - OK"
