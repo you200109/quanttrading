@@ -1,15 +1,21 @@
 name: Quality Code Stats
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 21 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  stats:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: 每日代码统计
-        run: echo "[Quality Code Stats] 每日代码统计 - OK"
+      - name: Generate code stats
+        run: |
+          echo '=== Code Statistics ==='
+          echo "Python files: $(find . -name '*.py' -not -path './vigilant-couscous/*' | wc -l)"
+          echo "Python LOC: $(find . -name '*.py' -not -path './vigilant-couscous/*' -exec cat {} + | wc -l)"
+          echo "JS files: $(find frontend -name '*.js' | wc -l)"
+          echo "JS LOC: $(find frontend -name '*.js' -exec cat {} + | wc -l)"
+          echo "Workflows: $(ls .github/workflows/*.yml | wc -l)"
