@@ -1,0 +1,15 @@
+name: Monitor Repo Stats
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 每日仓库统计
+        run: echo "[Monitor Repo Stats] 每日仓库统计 - OK"
