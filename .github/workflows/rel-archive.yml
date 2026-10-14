@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 发布产物归档
         run: echo "[Release Archive] 发布产物归档 - OK"

@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Scan TODOs
         run: |
           TODOS=$(grep -rn 'TODO\|FIXME\|HACK' --include='*.py' backend/ 2>/dev/null | wc -l)

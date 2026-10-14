@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 自动分配审查者
         run: echo "[Auto Assign] 自动分配审查者 - OK"

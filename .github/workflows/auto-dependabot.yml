@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 依赖更新自动合并
         run: echo "[Auto Dependabot Merge] 依赖更新自动合并 - OK"

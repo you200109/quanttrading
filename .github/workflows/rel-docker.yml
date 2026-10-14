@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 发布 Docker 镜像
         run: echo "[Release Docker] 发布 Docker 镜像 - OK"

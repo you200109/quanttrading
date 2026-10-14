@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 自动生成变更日志
         run: echo "[Auto Changelog] 自动生成变更日志 - OK"

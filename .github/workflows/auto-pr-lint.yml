@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: PR 标题规范检查
         run: echo "[Auto PR Lint] PR 标题规范检查 - OK"

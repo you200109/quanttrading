@@ -37,7 +37,7 @@ jobs:
     if: github.event.inputs.action != 'rollback'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -67,7 +67,7 @@ jobs:
     if: success()
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Generate version tag
         id: version
@@ -110,7 +110,7 @@ jobs:
     if: success() && (github.ref == 'refs/heads/main' || github.event.inputs.action == 'deploy')
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -191,7 +191,7 @@ jobs:
     if: github.event.inputs.action == 'rollback'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create rollback script
         env:
