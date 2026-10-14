@@ -1,0 +1,13 @@
+name: Deploy Staging
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 部署到预发环境
+        run: echo "[Deploy Staging] 部署到预发环境 - OK"
