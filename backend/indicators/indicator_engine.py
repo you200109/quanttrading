@@ -245,7 +245,21 @@ class IndicatorEngine:
                     if 'd' in info:
                         params['d'] = info['d']
                     params.update(kwargs)
-                    result = base_func(df, **params)
+                    # 根据函数签名自动传入正确的 Series 列
+                    try:
+                        sig = inspect.signature(base_func)
+                        first_params = list(sig.parameters.keys())
+                    except (ValueError, TypeError):
+                        first_params = ['close']
+                    series_args = []
+                    for p in first_params:
+                        if p in ('close', 'high', 'low', 'open', 'volume') and p in df.columns:
+                            series_args.append(df[p])
+                        else:
+                            break
+                    if not series_args:
+                        series_args = [df['close']]
+                    result = base_func(*series_args, **params)
                     if isinstance(result, pd.DataFrame):
                         for col in result.columns:
                             df[f'{indicator_name}_{col}'] = result[col]
