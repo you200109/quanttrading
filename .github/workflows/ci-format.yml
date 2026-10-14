@@ -1,13 +1,21 @@
 name: CI Format Check
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['backend/**']
 permissions:
   contents: read
 jobs:
-  main:
+  format:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 格式化检查
-        run: echo "[CI Format Check] 格式化检查 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install black
+        run: pip install black
+      - name: Check formatting
+        run: black backend/ --check --diff || echo 'Formatting issues found (non-blocking)'
