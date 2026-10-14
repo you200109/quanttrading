@@ -1,0 +1,13 @@
+name: CI Smoke Test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 冒烟测试
+        run: echo "[CI Smoke Test] 冒烟测试 - OK"
