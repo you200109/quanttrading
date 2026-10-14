@@ -1,0 +1,28 @@
+# 敏感文件
+.env
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+build/
+dist/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# 日志
+*.log
+
+# 数据
+data/*.csv
+search_results/
+
+# 构建
+release/
+deploy_package/
+node_modules/
