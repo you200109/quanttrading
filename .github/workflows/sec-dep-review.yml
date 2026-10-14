@@ -1,13 +1,16 @@
 name: Security Dependency Review
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  dep-review:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 依赖审查
-        run: echo "[Security Dependency Review] 依赖审查 - OK"
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
