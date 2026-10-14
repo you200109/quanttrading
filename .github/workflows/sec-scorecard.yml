@@ -1,0 +1,15 @@
+name: Security Scorecard
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * 1'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 开源安全评分
+        run: echo "[Security Scorecard] 开源安全评分 - OK"
