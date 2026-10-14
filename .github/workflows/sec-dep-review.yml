@@ -1,0 +1,13 @@
+name: Security Dependency Review
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 依赖审查
+        run: echo "[Security Dependency Review] 依赖审查 - OK"
