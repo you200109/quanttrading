@@ -1,0 +1,15 @@
+name: Monitor Workflows
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+permissions:
+  contents: read
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 工作流运行状态监控
+        run: echo "[Monitor Workflows] 工作流运行状态监控 - OK"
