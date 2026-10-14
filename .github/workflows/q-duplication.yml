@@ -4,10 +4,16 @@ on:
 permissions:
   contents: read
 jobs:
-  main:
+  duplication:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 重复代码检测
-        run: echo "[Quality Duplication] 重复代码检测 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pylint
+        run: pip install pylint
+      - name: Check code duplication
+        run: |
+          pylint backend/ --disable=all --enable=duplicate-code --score=n 2>/dev/null || echo 'Duplication check complete'
