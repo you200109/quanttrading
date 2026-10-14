@@ -1,0 +1,134 @@
+name: Auto Search OKX Projects
+
+on:
+  schedule:
+    # 每小时执行一次
+    - cron: '0 * * * *'
+  workflow_dispatch: # 支持手动触发
+
+jobs:
+  search-and-analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests pandas-ta -q
+
+      - name: Search GitHub for OKX related projects
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -c "
+          import requests
+          import json
+          import os
+          from datetime import datetime
+
+          token = os.environ.get('GITHUB_TOKEN', '')
+          headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+
+          keywords = ['okx trading', 'okx api python', 'okx websocket', 'okx bot',
+                      'okx strategy', 'okx backtest', 'okx indicator', 'okx quant',
+                      'cryptocurrency trading okx', 'okx market data', 'okx sdk',
+                      'okx ctp', 'okx qmt', 'okx ptrade']
+
+          all_results = []
+          for kw in keywords:
+              url = f'https://api.github.com/search/repositories?q={kw}&sort=stars&order=desc&per_page=10'
+              resp = requests.get(url, headers=headers)
+              if resp.status_code == 200:
+                  items = resp.json().get('items', [])
+                  for item in items:
+                      all_results.append({
+                          'name': item['full_name'],
+                          'url': item['html_url'],
+                          'stars': item['stargazers_count'],
+                          'description': item.get('description', ''),
+                          'language': item.get('language', ''),
+                          'updated_at': item['updated_at'],
+                          'keyword': kw,
+                      })
+
+          # 去重
+          seen = set()
+          unique = []
+          for r in all_results:
+              if r['name'] not in seen:
+                  seen.add(r['name'])
+                  unique.append(r)
+
+          # 按星数排序
+          unique.sort(key=lambda x: x['stars'], reverse=True)
+
+          # 保存结果
+          os.makedirs('search_results', exist_ok=True)
+          ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+          with open(f'search_results/{ts}.json', 'w', encoding='utf-8') as f:
+              json.dump(unique[:50], f, ensure_ascii=False, indent=2)
+
+          # 生成报告
+          report = f'# OKX Related Projects Search Report\n\n'
+          report += f'Search Time: {datetime.now().isoformat()}\n\n'
+          report += f'Total unique projects found: {len(unique)}\n\n'
+          report += '| Project | Stars | Language | Description |\n'
+          report += '|---------|-------|----------|-------------|\n'
+          for r in unique[:20]:
+              desc = (r['description'] or '')[:60].replace('|', '/')
+              report += f'| [{r[\"name\"]}]({r[\"url\"]}) | {r[\"stars\"]} | {r[\"language\"] or \"-\"} | {desc} |\n'
+
+          with open(f'search_results/{ts}_report.md', 'w', encoding='utf-8') as f:
+              f.write(report)
+
+          print(f'Found {len(unique)} unique projects')
+          print(json.dumps(unique[:5], indent=2))
+          "
+
+      - name: Upload search results
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-results-${{ github.run_id }}
+          path: search_results/
+
+      - name: Create issue if new projects found
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -c "
+          import os
+          import glob
+          import json
+          from datetime import datetime
+
+          latest = sorted(glob.glob('search_results/*_report.md'))[-1]
+          with open(latest, 'r', encoding='utf-8') as f:
+              report = f.read()
+
+          # 使用 GitHub API 创建 Issue
+          import requests
+          token = os.environ['GITHUB_TOKEN']
+          repo = os.environ.get('GITHUB_REPOSITORY', '')
+          headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+
+          title = f'OKX Projects Search Report - {datetime.now().strftime(\"%Y-%m-%d %H:00\")}'
+          body = report[:65000]  # GitHub issue body 限制
+
+          resp = requests.post(
+              f'https://api.github.com/repos/{repo}/issues',
+              headers=headers,
+              json={'title': title, 'body': body, 'labels': ['auto-search', 'okx-projects']}
+          )
+          if resp.status_code == 201:
+              print('Issue created successfully')
+          else:
+              print(f'Failed to create issue: {resp.status_code}')
+          "
