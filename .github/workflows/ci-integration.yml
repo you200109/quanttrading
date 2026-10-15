@@ -4,10 +4,24 @@ on:
 permissions:
   contents: read
 jobs:
-  main:
+  integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: 集成测试
-        run: echo "[CI Integration] 集成测试 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Integration test - indicator engine
+        run: |
+          python -c "
+          from backend.indicators.indicator_engine import get_indicator_engine
+          e = get_indicator_engine()
+          print(f'Indicator engine: {e.get_indicator_count()} indicators loaded')
+          assert e.get_indicator_count() > 400, 'Indicator count below 400'
+          print('Integration test PASSED')
+          "

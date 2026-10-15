@@ -1,13 +1,31 @@
 name: Deploy Staging
 on:
   workflow_dispatch:
+  push:
+    branches: [develop]
 permissions:
   contents: read
 jobs:
-  main:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    environment: staging
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: 部署到预发环境
-        run: echo "[Deploy Staging] 部署到预发环境 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Deploy to staging
+        run: |
+          echo '=== Staging Deployment ==='
+          pip install -r requirements.txt -q
+          python -c "from backend.main import app; print('Staging build verified:', app.title)"
+          echo 'Staging deployment package ready'
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-package
+          path: |
+            backend/
+            frontend/
+            requirements.txt

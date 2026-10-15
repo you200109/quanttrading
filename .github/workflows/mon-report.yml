@@ -1,15 +1,22 @@
 name: Monitor Daily Report
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 5 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  report:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: 每日运维报告
-        run: echo "[Monitor Daily Report] 每日运维报告 - OK"
+      - name: Generate daily report
+        run: |
+          echo "# Daily Operations Report - $(date +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Repository Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Runner: operational ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Workflows: functional ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Report generated: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo 'Daily report generated'

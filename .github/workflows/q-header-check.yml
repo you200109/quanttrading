@@ -4,10 +4,13 @@ on:
 permissions:
   contents: read
 jobs:
-  main:
+  header:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: 文件头检查
-        run: echo "[Quality Header Check] 文件头检查 - OK"
+      - name: Check Python file headers
+        run: |
+          COUNT=$(find backend -name '*.py' | wc -l)
+          DOCSTRINGS=$(grep -l '"""' backend/**/*.py 2>/dev/null | wc -l)
+          echo "Python files: $COUNT, with docstrings: $DOCSTRINGS"

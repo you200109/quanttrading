@@ -4,10 +4,12 @@ on:
 permissions:
   contents: read
 jobs:
-  main:
+  spellcheck:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 拼写检查
-        run: echo "[Quality Spellcheck] 拼写检查 - OK"
+      - name: Install codespell
+        run: pip install codespell
+      - name: Run spellcheck
+        run: codespell --quiet-level=2 || echo 'Spellcheck complete with findings'

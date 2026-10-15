@@ -1,13 +1,18 @@
 name: Quality TODO Scanner
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 21 * * *'
 permissions:
   contents: read
 jobs:
-  main:
+  todo:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: TODO 标记扫描
-        run: echo "[Quality TODO Scanner] TODO 标记扫描 - OK"
+      - name: Scan TODOs
+        run: |
+          TODOS=$(grep -rn 'TODO\|FIXME\|HACK' --include='*.py' backend/ 2>/dev/null | wc -l)
+          echo "Found $TODOS TODO/FIXME items"
+          grep -rn 'TODO\|FIXME\|HACK' --include='*.py' backend/ 2>/dev/null | head -10 || echo 'No TODOs found'

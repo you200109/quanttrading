@@ -15,6 +15,7 @@ from typing import Optional
 from backend.core.okx_data_service import get_data_service
 from backend.core.okx_trade_service import get_trade_service
 from backend.indicators.indicator_engine import get_indicator_engine
+from backend.core.backtest_engine import get_backtest_engine
 
 router = APIRouter()
 
@@ -191,6 +192,67 @@ async def calculate_indicators(body: dict):
     # 转为可序列化格式
     result = df.fillna('').to_dict(orient='records')
     return {'code': 0, 'count': len(result), 'data': result}
+
+
+# ==================== 回测接口 ====================
+
+@router.post('/api/backtest')
+async def run_backtest(body: dict):
+    """运行策略回测
+    :body: { inst_id, bar, strategy, params, limit }
+    """
+    import pandas as pd
+    inst_id = body.get('inst_id', 'BTC-USDT')
+    bar = body.get('bar', '1H')
+    strategy = body.get('strategy', 'ma_cross')
+    params = body.get('params', {})
+    limit = body.get('limit', '300')
+
+    svc = get_data_service()
+    raw = svc.get_candlesticks(inst_id, bar, limit)
+
+    if not raw:
+        return {'code': 1, 'msg': 'No data'}
+
+    cols = ['ts', 'open', 'high', 'low', 'close', 'vol', 'volCcy', 'volCcyQuote', 'confirm']
+    df = pd.DataFrame(raw, columns=cols)
+    for c in ['open', 'high', 'low', 'close', 'vol']:
+        df[c] = pd.to_numeric(df[c], errors='coerce')
+    df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
+
+    engine = get_backtest_engine()
+    result = engine.run(df, strategy, params)
+    return result
+
+
+# ==================== 历史数据下载接口 ====================
+
+@router.get('/api/history/download')
+async def download_history(inst_id: str = 'BTC-USDT', bar: str = '1H', limit: str = '100'):
+    """下载历史K线数据（CSV格式）"""
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+
+    svc = get_data_service()
+    raw = svc.get_candlesticks(inst_id, bar, limit)
+
+    if not raw:
+        return {'code': 1, 'msg': 'No data'}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['timestamp', 'open', 'high', 'low', 'close', 'volume', 'volume_quote', 'confirm'])
+    for row in raw:
+        writer.writerow(row)
+
+    output.seek(0)
+    filename = f'{inst_id}_{bar}_{limit}.csv'
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'},
+    )
 
 
 # ==================== WebSocket 实时推送 ====================

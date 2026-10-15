@@ -1,13 +1,28 @@
 name: Security Gatekeeper
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  gatekeeper:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 安全门禁检查
-        run: echo "[Security Gatekeeper] 安全门禁检查 - OK"
+      - name: Security gate checks
+        run: |
+          # 检查 .env 不在仓库中
+          if git ls-files | grep -q '^\.env$'; then
+            echo '❌ .env file is tracked! Security violation.'
+            exit 1
+          else
+            echo '✅ .env not tracked'
+          fi
+          # 检查 .gitignore 包含 .env
+          if grep -q '^\.env$' .gitignore; then
+            echo '✅ .env in gitignore'
+          else
+            echo '⚠️ .env not in gitignore'
+          fi

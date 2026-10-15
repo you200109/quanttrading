@@ -1,15 +1,20 @@
 name: Monitor Dependencies
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  deps:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 依赖版本监控
-        run: echo "[Monitor Dependencies] 依赖版本监控 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check outdated dependencies
+        run: |
+          pip install -r requirements.txt -q
+          pip list --outdated | head -20 || echo 'All dependencies up to date'

@@ -1,0 +1,75 @@
+name: Deep Audit
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    name: Dependency & License Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install audit tools
+        run: |
+          pip install pip-audit safety pip-licenses cyclonedx-bom
+
+      - name: Dependency vulnerability audit
+        run: |
+          echo "## Deep Audit Report" >> $GITHUB_STEP_SUMMARY
+          pip-audit -r requirements.txt --desc > audit-result.txt 2>&1 || true
+          VULNS=$(grep -c 'vulnerab' audit-result.txt || echo 0)
+          echo "- Vulnerabilities: $VULNS" >> $GITHUB_STEP_SUMMARY
+          head -30 audit-result.txt
+
+      - name: License compliance check
+        run: |
+          pip install -r requirements.txt -q
+          pip-licenses --format=markdown > licenses.md
+          LICENSES=$(wc -l < licenses.md)
+          echo "- Licenses: $LICENSES entries" >> $GITHUB_STEP_SUMMARY
+          if grep -qi 'gpl' licenses.md; then
+            echo "::warning::GPL license found, review compliance"
+          fi
+
+      - name: Generate SBOM
+        run: |
+          cyclonedx-py requirements --output-format XML -o sbom.xml || true
+          echo "- SBOM generated" >> $GITHUB_STEP_SUMMARY
+
+      - name: Outdated dependencies
+        run: |
+          pip list --outdated > outdated.txt || true
+          OUTDATED=$(grep -c 'Latest' outdated.txt || echo 0)
+          echo "- Outdated deps: $OUTDATED" >> $GITHUB_STEP_SUMMARY
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+        continue-on-error: true
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: |
+            audit-result.txt
+            licenses.md
+            sbom.xml
+            outdated.txt
+          if-no-files-found: ignore

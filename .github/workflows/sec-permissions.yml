@@ -1,13 +1,26 @@
-name: Security Permissions
+name: Security Permissions Check
 on:
   workflow_dispatch:
+  push:
+    paths: ['.github/workflows/**']
 permissions:
   contents: read
 jobs:
-  main:
+  permissions-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 工作流权限最小化检查
-        run: echo "[Security Permissions] 工作流权限最小化检查 - OK"
+      - name: Check workflow permissions
+        run: |
+          # 检查所有工作流是否有权限声明
+          MISSING=0
+          for f in .github/workflows/*.yml; do
+            if ! grep -q '^permissions:' "$f"; then
+              echo "⚠️ $f missing permissions block"
+              MISSING=1
+            fi
+          done
+          if [ $MISSING -eq 0 ]; then
+            echo '✅ All workflows have permissions declared'
+          fi

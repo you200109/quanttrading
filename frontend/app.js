@@ -9,7 +9,7 @@
  * - 底部数据表格加载
  */
 
-const API_BASE = window.location.origin.replace(/:\d+$/, ':8000');
+const API_BASE = window.location.origin.startsWith('http://localhost') ? window.location.origin : 'http://localhost:8000';
 const WS_BASE = API_BASE.replace('http', 'ws');
 
 // 全局状态
