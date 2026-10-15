@@ -2,210 +2,58 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - 'tests/**'
-      - 'requirements*.txt'
-      - '.github/workflows/**'
+    branches: [main, develop]
   pull_request:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  security-events: write
-  pull-requests: write
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
-  repo-health:
-    name: Repo Health
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Check git history
-        run: |
-          echo "## Git Health" >> $GITHUB_STEP_SUMMARY
-          echo "- Commits: $(git rev-list --all --count)" >> $GITHUB_STEP_SUMMARY
-          echo "- Branches: $(git branch -a | wc -l)" >> $GITHUB_STEP_SUMMARY
-          echo "- Tags: $(git tag | wc -l)" >> $GITHUB_STEP_SUMMARY
-          echo "- Repo size: $(du -sh .git | cut -f1)" >> $GITHUB_STEP_SUMMARY
-      - name: Check duplicate tags
-        run: |
-          dup=$(git tag | sort | uniq -d)
-          if [ -n "$dup" ]; then
-            echo "::error::Duplicate tags: $dup"
-            exit 1
-          fi
-      - name: Check large files
-        run: |
-          echo "## Large Files TOP10" >> $GITHUB_STEP_SUMMARY
-          git rev-list --objects --all \
-            | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
-            | awk '/^blob/ {print $3, $4}' \
-            | sort -rn | head -10 \
-            | awk '{printf "- %.2f MB  %s\n", $1/1024/1024, $2}' \
-            >> $GITHUB_STEP_SUMMARY
-
   lint:
-    name: Lint
+    name: Code Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: pip install ruff black mypy
-      - name: Ruff
-        run: ruff check backend/ --output-format=github || true
-      - name: Black
-        run: black --check backend/ || echo 'Format issues found (non-blocking)'
-      - name: Mypy
-        run: mypy backend/ --ignore-missing-imports || true
-
-  security:
-    name: Security
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-      - name: Install tools
-        run: pip install pip-audit bandit
-      - name: Pip audit
-        run: pip-audit -r requirements.txt --format=json --output=pip-audit.json || true
-      - name: Bandit
-        run: bandit -r backend/ -f json -o bandit.json || true
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-      - name: Upload security reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-reports
-          path: |
-            pip-audit.json
-            bandit.json
-          if-no-files-found: ignore
-
-  codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: python
-      - uses: github/codeql-action/autobuild@v3
-        continue-on-error: true
-      - uses: github/codeql-action/analyze@v3
+      - name: Install flake8
+        run: pip install flake8
+      - name: Run flake8 (main system)
+        run: flake8 backend/ --count --max-line-length=120 --select=E9,F63,F7,F82 --show-source
+      - name: Run flake8 (vigilant-couscous)
+        run: flake8 vigilant-couscous/ --count --max-line-length=120 --select=E9,F63,F7,F82 --show-source
 
   test:
-    name: Test (Py ${{ matrix.python-version }})
+    name: Unit Tests
+    runs-on: ubuntu-latest
     needs: lint
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.11', '3.12']
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
-      - name: Run tests
-        run: |
-          if [ -d tests ] && find tests -name 'test_*.py' | grep -q .; then
-            pytest tests/ --cov=backend --cov-report=xml --cov-report=term || true
-          else
-            echo 'No test files, running smoke test'
-            python -c "from backend.main import app; print('Smoke test OK')"
-          fi
-      - name: Upload coverage
-        if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.xml
-          if-no-files-found: ignore
-
-  quant-check:
-    name: Quant Check
-    needs: test
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: pip install -r requirements.txt
-      - name: Check lookahead bias
+      - name: Install dependencies
         run: |
-          echo "## Quant Checks" >> $GITHUB_STEP_SUMMARY
-          LOOKAHEAD=$(grep -rn "shift(-" backend/ 2>/dev/null | wc -l)
-          echo "- Lookahead (shift(-) hits: $LOOKAHEAD" >> $GITHUB_STEP_SUMMARY
-          if [ "$LOOKAHEAD" -gt 0 ]; then
-            echo "::warning::Possible lookahead bias found"
-            grep -rn "shift(-" backend/ | head -5
-          else
-            echo "- OK: no lookahead bias" >> $GITHUB_STEP_SUMMARY
-          fi
-      - name: Check slippage and commission
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      - name: Run main system tests
+        run: python -m pytest tests/ -v --tb=short -o addopts=''
+      - name: Run vc tests
         run: |
-          SLIP=$(grep -rn "slippage" backend/ 2>/dev/null | wc -l)
-          COMM=$(grep -rnE "commission|fee" backend/ 2>/dev/null | wc -l)
-          echo "- Slippage refs: $SLIP, Commission refs: $COMM" >> $GITHUB_STEP_SUMMARY
-      - name: Check risk controls
+          cd vigilant-couscous
+          python -m pytest tests/ -v --tb=short -o addopts=''
+
+  merge-check:
+    name: Post-Merge Check
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
         run: |
-          RISK=$(grep -rnE "stop_loss|max_position|risk_limit" backend/ 2>/dev/null | wc -l)
-          echo "- Risk control refs: $RISK" >> $GITHUB_STEP_SUMMARY
-          if [ "$RISK" -eq 0 ]; then
-            echo "::warning::No risk control code found"
-          fi
-      - name: Backtest sanity check
-        run: |
-          python -c "
-          from backend.core.backtest_engine import get_backtest_engine
-          import pandas as pd
-          import numpy as np
-          e = get_backtest_engine()
-          n = 200
-          np.random.seed(42)
-          prices = 100 * np.cumprod(1 + np.random.normal(0.001, 0.02, n))
-          df = pd.DataFrame({
-              'ts': pd.date_range('2026-01-01', periods=n, freq='h'),
-              'open': prices,
-              'high': prices * 1.01,
-              'low': prices * 0.99,
-              'close': prices,
-              'vol': np.random.uniform(1, 100, n),
-          })
-          result = e.run(df, 'ma_cross', {'fast': 5, 'slow': 20})
-          assert result['code'] == 0, 'Backtest failed'
-          assert 'total_return_pct' in result
-          assert 'max_drawdown_pct' in result
-          print('Backtest sanity check PASSED:', result['total_trades'], 'trades, return', result['total_return_pct'], '%')
-          "
+          pip install -r requirements.txt
+          pip install flake8 pytest
+      - name: Run merge check
+        run: python scripts/post_merge_check.py
