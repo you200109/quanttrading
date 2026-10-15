@@ -56,6 +56,6 @@ quanttrading/
 ├── vigilant-couscous/        # AI交易进化系统
 ├── docs/                     # 文档
 ├── scripts/                  # 运维脚本
-├── .github/workflows/        # 73个工作流
+├── .github/workflows/        # 40个工作流
 └── .env                      # 环境配置
 ```
