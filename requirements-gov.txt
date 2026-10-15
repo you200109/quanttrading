@@ -1,0 +1,20 @@
+# 治理工具链依赖（scripts/gov/*）
+#
+# 与 requirements.txt（应用运行时依赖）分离的三个理由：
+# 1. 这些包只服务于仓库度量/治理脚本，不应进入生产镜像（Docker build 用 requirements.txt）；
+# 2. CI 的 ci.yml 需要显式安装它们，否则 tests/test_gov_metrics.py 中依赖
+#    PyYAML 的用例会静默 skip——本仓库一贯反对"缺依赖就悄悄降级"，因此把
+#    治理工具链的依赖显式声明出来，而不是藏在各工作流的 pip 行里；
+# 3. 原 P5 合并前的 mon-*/q-* 工作流各自 pip install，版本随云波动，
+#    收敛到一处后可复现。
+#
+# 版本升级走 Dependabot PR，合并前须跑通 CI。
+
+# YAML 解析（m_yaml_lint：.github 下配置语法校验）
+PyYAML==6.0.3
+
+# 圈复杂度（m_complexity）
+radon==6.0.1
+
+# 拼写检查（m_spellcheck）
+codespell==2.4.3

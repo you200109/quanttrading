@@ -81,11 +81,23 @@ def test_repo_size_is_positive(fake_repo):
 
 
 def test_yaml_lint_detects_broken(fake_repo):
+    # PyYAML 属治理工具链可选依赖（requirements-gov.txt）：本机没装就明确 skip，
+    # 而不是把"缺失降级"误报成失败。CI 会在 test job 显式安装该工具链，
+    # 因此这条用例在 CI 上真实执行（见 ci.yml: Install governance toolchain）。
+    pytest.importorskip("yaml")
     (fake_repo / ".github" / "bad.yml").write_text("a: [1,\n  b: :\n", encoding="utf-8")
     res = gm.m_yaml_lint(fake_repo)
     assert res.status == "ok"
     assert res.data["count"] == 1
     assert "bad.yml" in res.data["invalid"][0]
+
+
+def test_yaml_lint_skipped_without_pyyaml(fake_repo, monkeypatch):
+    """PyYAML 不在环境里时降级为 skipped 而非 failed（与 m_complexity 同规则）"""
+    monkeypatch.setitem(sys.modules, "yaml", None)  # import yaml 将抛 ImportError
+    res = gm.m_yaml_lint(fake_repo)
+    assert res.status == "skipped"
+    assert "PyYAML" in res.note
 
 
 # ---------------- 外部依赖缺失 -> skipped（不是 failed） ----------------

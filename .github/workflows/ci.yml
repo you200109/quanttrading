@@ -53,6 +53,10 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pytest pytest-cov
+      - name: Install governance toolchain
+        # tests/test_gov_metrics.py 有依赖 PyYAML 的用例：不装会静默 skip，
+        # 让"缺失即降级"变成"缺失即没人发现"，故治理工具链在此显式安装
+        run: pip install -r requirements-gov.txt
       - name: Run main system tests
         run: python -m pytest tests/ -v --tb=short -o addopts='' --cov=backend --cov-report=term --cov-fail-under=40
       - name: Run vc tests
