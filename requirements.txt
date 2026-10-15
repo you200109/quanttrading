@@ -24,7 +24,7 @@ websockets==17.2
 
 # 数据处理
 pandas>=2.3.3,<3.0
-numpy==2.2.6
+numpy==2.5.4
 
 # HTTP 请求
 requests==2.34.2
