@@ -3,6 +3,7 @@ vigilant-couscous 功能整合路由
 将 AGI/agents/evolution/strategy/trading/memory 模块整合到主系统 API
 """
 import os
+import re
 import sys
 import json
 import logging
@@ -198,19 +199,13 @@ async def get_nexus_data():
 @router.get('/memory/nexus/{filename}')
 async def get_nexus_file(filename: str):
     """获取记忆存储文件内容（仅允许纯文件名，拒绝路径遍历）"""
-    # 安全校验 1：拒绝任何路径分隔符与相对路径片段
-    if (filename != os.path.basename(filename)
-            or '/' in filename or '\\' in filename
-            or filename in ('.', '..') or filename.startswith('.')):
+    # 安全校验 1：白名单字符集——只允许普通文件名，拒绝分隔符/相对路径/点文件
+    if not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9._-]*', filename):
         return {'code': 1, 'msg': 'Invalid filename'}
-    nexus_dir = os.path.abspath(os.path.join(VC_ROOT, 'memory', 'nexus'))
-    filepath = os.path.abspath(os.path.join(nexus_dir, filename))
-    # 安全校验 2：解析后的绝对路径必须与 nexus 目录同根（commonpath 包含检查）
-    try:
-        escaped = os.path.commonpath([nexus_dir, filepath]) != nexus_dir
-    except ValueError:
-        escaped = True  # 跨盘符等异常路径一律拒绝
-    if escaped:
+    # 安全校验 2：realpath 归一化 + 包含检查（守卫同一基本块内的全部文件操作）
+    nexus_dir = os.path.realpath(os.path.join(VC_ROOT, 'memory', 'nexus'))
+    filepath = os.path.realpath(os.path.join(nexus_dir, filename))
+    if os.path.commonpath([nexus_dir, filepath]) != nexus_dir:
         return {'code': 1, 'msg': 'Invalid filename'}
     if not os.path.isfile(filepath):
         return {'code': 1, 'msg': 'File not found'}
