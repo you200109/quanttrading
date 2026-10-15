@@ -37,7 +37,7 @@ labels:
       - "docs/**"
       - "README.md"
       - "BASELINE.md"
-      - "CONTRIBUTING.md"
+      - "VERIFICATION.md"
 
   - label: "dependencies"
     files:

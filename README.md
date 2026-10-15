@@ -13,7 +13,7 @@
 - 📝 挂单、历史委托、成交明细、账单流水
 - 🔄 WebSocket 实时数据推送
 - 🤖 AI 交易进化系统（vigilant-couscous）
-- ⚙️ 40 个 GitHub Actions 自动化工作流
+- ⚙️ 21 个 GitHub Actions 自动化工作流
 
 ## 🚀 快速开始
 
@@ -35,7 +35,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 | 前端 | HTML + CSS + JS + Chart.js (CDN) |
 | 数据源 | OKX API (www.okx.com) |
 | 指标库 | pandas-ta (508 个指标) |
-| CI/CD | GitHub Actions (40 个工作流) |
+| CI/CD | GitHub Actions (21 个工作流) |
 
 ## 📚 文档
 

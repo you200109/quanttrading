@@ -1,0 +1,55 @@
+# P5（2026-10-16）：合并原 mon-*(10) + q-*(10) 共 20 个工作流的度量职责
+#
+# 原状问题：
+#   1. 约半数纯 echo 桩（mon-health 只输出三行 "✅ xxx is operational"）；
+#   2. 少数装了真工具（radon/pylint/linkchecker/codespell/yamllint/pytest-cov），
+#      但全部 `|| echo` 兜底 → 度量永不失败也无门禁价值，且结果只进日志、次日不可查；
+#   3. 20 个工作流各自 checkout + setup-python + 装依赖，重复消耗 Actions 分钟数。
+#
+# 合并后：单次采集产出结构化 JSON（scripts/gov/metrics.py），以 artifact 持久化。
+# 有意未收编：pytest 覆盖率——ci.yml 的 --cov-fail-under 是真门禁，此处不重复跑。
+
+name: Gov Metrics
+
+on:
+  schedule:
+    # 每天 03:00 Asia/Shanghai（= 19:00 UTC 前一天）
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/gov/**'
+      - '.github/workflows/gov-metrics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  metrics:
+    name: Collect Governance Metrics
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install optional metric tools
+        # 采集器对缺失工具自动降级为 skipped，故安装失败不阻塞
+        run: pip install radon codespell || echo 'optional tools unavailable (metrics will skip)'
+
+      - name: Collect metrics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/gov/metrics.py --print
+
+      - name: Upload metrics report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gov-metrics-${{ github.run_number }}
+          path: reports/*.json
+          retention-days: 90
+          if-no-files-found: error
