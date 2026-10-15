@@ -11,6 +11,8 @@
 from typing import Optional
 from datetime import datetime, timedelta
 from pathlib import Path
+import os
+import re
 import pandas as pd
 import logging
 
@@ -347,13 +349,27 @@ class DataFetcher:
         return df[required_cols]
     
     def _cache_key(self, symbol: str, start_date: str, end_date: str) -> str:
-        """生成缓存键（符号中的斜杠/横杠转义为下划线，避免被当作路径分隔符）"""
-        safe_symbol = symbol.replace("/", "_").replace("-", "_")
+        """生成缓存键（符号白名单化 + 日期严格校验，杜绝路径遍历）"""
+        safe_symbol = re.sub(r'[^A-Za-z0-9_]', '_', symbol)
+        for d in (start_date, end_date):
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', d):
+                raise ValueError(f'非法日期格式: {d!r}')
         return f"{safe_symbol}_{start_date}_{end_date}.parquet"
-    
+
+    def _safe_cache_file(self, symbol: str, start_date: str, end_date: str) -> Optional[Path]:
+        """realpath 归一化 + startswith 包含检查后的缓存文件路径（防路径遍历）"""
+        key = self._cache_key(symbol, start_date, end_date)
+        base = os.path.realpath(self.cache_dir)
+        p = os.path.realpath(os.path.join(base, key))
+        if not p.startswith(base + os.sep):
+            return None
+        return Path(p)
+
     def _load_cache(self, symbol: str, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
         """加载缓存数据"""
-        cache_file = self.cache_dir / self._cache_key(symbol, start_date, end_date)
+        cache_file = self._safe_cache_file(symbol, start_date, end_date)
+        if cache_file is None:
+            return None
         if cache_file.exists():
             try:
                 df = pd.read_parquet(cache_file)
@@ -362,11 +378,13 @@ class DataFetcher:
             except Exception:
                 pass
         return None
-    
+
     def _save_cache(self, symbol: str, start_date: str, end_date: str, df: pd.DataFrame):
         """保存缓存数据（自动创建父目录）"""
         try:
-            cache_file = self.cache_dir / self._cache_key(symbol, start_date, end_date)
+            cache_file = self._safe_cache_file(symbol, start_date, end_date)
+            if cache_file is None:
+                return
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             df.to_parquet(cache_file)
         except Exception as e:

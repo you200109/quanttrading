@@ -11,8 +11,11 @@ def validate(filename):
     # 安全校验 1：白名单字符集
     if not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9._-]*', filename):
         return False
-    # 安全校验 2：realpath 归一化 + commonpath 包含检查
+    # 安全校验 2：realpath 归一化 + startswith 前缀包含检查（CodeQL 公认消毒器）
     filepath = os.path.realpath(os.path.join(nexus_dir, filename))
+    if not filepath.startswith(nexus_dir + os.sep):
+        return False
+    # 安全校验 3：commonpath 二次包含校验（纵深防御）
     if os.path.commonpath([nexus_dir, filepath]) != nexus_dir:
         return False
     if not os.path.isfile(filepath):

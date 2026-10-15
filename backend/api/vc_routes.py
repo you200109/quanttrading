@@ -202,9 +202,12 @@ async def get_nexus_file(filename: str):
     # 安全校验 1：白名单字符集——只允许普通文件名，拒绝分隔符/相对路径/点文件
     if not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9._-]*', filename):
         return {'code': 1, 'msg': 'Invalid filename'}
-    # 安全校验 2：realpath 归一化 + 包含检查（守卫同一基本块内的全部文件操作）
+    # 安全校验 2：realpath 归一化 + startswith 前缀包含检查（CodeQL py/path-injection 公认消毒器）
     nexus_dir = os.path.realpath(os.path.join(VC_ROOT, 'memory', 'nexus'))
     filepath = os.path.realpath(os.path.join(nexus_dir, filename))
+    if not filepath.startswith(nexus_dir + os.sep):
+        return {'code': 1, 'msg': 'Invalid filename'}
+    # 安全校验 3：commonpath 二次包含校验（纵深防御，防前缀目录名旁路）
     if os.path.commonpath([nexus_dir, filepath]) != nexus_dir:
         return {'code': 1, 'msg': 'Invalid filename'}
     if not os.path.isfile(filepath):

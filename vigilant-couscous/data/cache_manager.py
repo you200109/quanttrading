@@ -15,6 +15,7 @@
         └── meta.json           元信息(范围/条数/校验和/修订号)
 """
 import os
+import re
 import json
 import time
 import hashlib
@@ -47,10 +48,17 @@ class MarketDataCache:
 
     # ---------- 路径与索引 ----------
     def _symbol_dir(self, symbol: str) -> Path:
-        safe = symbol.replace("/", "_").replace("-", "_")
-        d = self.cache_root / safe
-        d.mkdir(parents=True, exist_ok=True)
-        return d
+        # 白名单字符化：非字母数字一律替换为下划线，杜绝分隔符/相对路径注入
+        safe = re.sub(r'[^A-Za-z0-9_]', '_', symbol)
+        if not safe:
+            raise ValueError(f'非法交易对标识: {symbol!r}')
+        # realpath 归一化 + startswith 前缀包含检查（防路径遍历）
+        base = os.path.realpath(self.cache_root)
+        d = os.path.realpath(os.path.join(base, safe))
+        if not d.startswith(base + os.sep):
+            raise ValueError(f'非法交易对标识: {symbol!r}')
+        os.makedirs(d, exist_ok=True)
+        return Path(d)
 
     def _data_file(self, symbol: str) -> Path:
         return self._symbol_dir(symbol) / "data.parquet"
