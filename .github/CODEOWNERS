@@ -1,18 +1,41 @@
-# Code owners for quanttrading
-# Default owner
-* @you200109
+# Code Owners for QuantTrading
+# Default owner for all files
+*                           @you200109
 
-# Backend
-/backend/ @you200109
+# Backend core modules
+/backend/core/              @you200109
+/backend/api/               @you200109
+/backend/indicators/        @you200109
+/backend/mcp/               @you200109
+
+# vigilant-couscous modules
+/vigilant-couscous/agents/  @you200109
+/vigilant-couscous/agi/     @you200109
+/vigilant-couscous/evolution/ @you200109
+/vigilant-couscous/strategy/ @you200109
+/vigilant-couscous/trading/ @you200109
+/vigilant-couscous/data/    @you200109
+/vigilant-couscous/memory/ @you200109
+
+# CI/CD
+/.github/workflows/         @you200109
+/.github/dependabot.yml     @you200109
+
+# Security
+/.github/SECURITY.md        @you200109
+/.github/CODEOWNERS         @you200109
 
 # Frontend
-/frontend/ @you200109
+/frontend/                  @you200109
 
-# Workflows
-/.github/workflows/ @you200109
-
-# Documentation
-/docs/ @you200109
+# Tests
+/tests/                     @you200109
+/vigilant-couscous/tests/   @you200109
 
 # Scripts
-/scripts/ @you200109
+/scripts/                   @you200109
+
+# Configuration
+/requirements.txt           @you200109
+/.env                       @you200109
+/.devcontainer/             @you200109
