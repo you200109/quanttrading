@@ -1,0 +1,45 @@
+{
+  "name": "QuantTrading Development",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "forwardPorts": [8000, 8001],
+  "postCreateCommand": "pip install -r requirements.txt && pip install -r vigilant-couscous/requirements.txt 2>/dev/null; echo 'Dev environment ready!'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.flake8",
+        "ms-python.vscode-pylance",
+        "redhat.vscode-yaml",
+        "github.copilot"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": true,
+        "editor.formatOnSave": true,
+        "editor.tabSize": 4
+      }
+    }
+  },
+  "portsAttributes": {
+    "8000": {
+      "label": "FastAPI Backend",
+      "onAutoForward": "openBrowser"
+    },
+    "8001": {
+      "label": "WebSocket",
+      "onAutoForward": "notify"
+    }
+  },
+  "remoteEnv": {
+    "API_HOST": "0.0.0.0",
+    "API_PORT": "8000",
+    "OKX_DEMO": "true"
+  }
+}
