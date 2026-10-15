@@ -5,7 +5,9 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     },
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    }
   },
   "forwardPorts": [8000, 8001],
   "postCreateCommand": "pip install -r requirements.txt && pip install -r vigilant-couscous/requirements.txt 2>/dev/null; echo 'Dev environment ready!'",

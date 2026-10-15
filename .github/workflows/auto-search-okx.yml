@@ -31,21 +31,12 @@ jobs:
           seen = set()
           unique = [r for r in results if not (r['name'] in seen or seen.add(r['name']))]
           unique.sort(key=lambda x: x['stars'], reverse=True)
-          report = '# OKX Projects Search Report
-
-'
-          report += f'Search time: {datetime.now().isoformat()}
-
-'
-          report += f'Found {len(unique)} unique projects
-
-'
-          report += '| Project | Stars | Description |
-|---------|-------|-------------|
-'
+          report = '# OKX Projects Search Report\n\n'
+          report += f'Search time: {datetime.now().isoformat()}\n\n'
+          report += f'Found {len(unique)} unique projects\n\n'
+          report += '| Project | Stars | Description |\n|---------|-------|-------------|\n'
           for r in unique[:15]:
-              report += f"| [{r['name']}]({r['url']}) | {r['stars']} | {r['desc']} |
-"
+              report += f"| [{r['name']}]({r['url']}) | {r['stars']} | {r['desc']} |\n"
           with open('report.md', 'w') as f:
               f.write(report)
           print(f'Found {len(unique)} projects')
