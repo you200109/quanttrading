@@ -1,5 +1,5 @@
 """
-GitHub 策略批量回测 - 68 个策略在 BTC 真实数据上验�?
+GitHub 策略批量回测 - 68 个策略在 BTC 真实数据上验证
 """
 import json
 import logging
@@ -19,11 +19,11 @@ print('=' * 60)
 print('  GitHub 策略批量回测 - BTC/USDT 真实数据')
 print('=' * 60)
 
-# 加载策略�?
+# 加载策略库
 with open('memory/nexus/gh_strategy_library.json', encoding='utf-8') as f:
     lib = json.load(f)
 strategies = lib['strategies']
-print(f'\n加载 {len(strategies)} 个策�?)
+print(f'\n加载 {len(strategies)} 个策略')
 
 # 获取 BTC 数据
 from data.fetcher import DataFetcher
@@ -32,7 +32,7 @@ fetcher = DataFetcher(okx_url='https://www.www.okx.com')
 end_date = datetime.now().strftime('%Y-%m-%d')
 start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
 btc_data = fetcher.fetch('BTC/USDT', start_date=start_date, end_date=end_date, source='ccxt')
-print(f'BTC 数据: {len(btc_data)} �? 最新价: ${btc_data["close"].iloc[-1]:,.2f}')
+print(f'BTC 数据: {len(btc_data)} 条, 最新价: ${btc_data["close"].iloc[-1]:,.2f}')
 
 close = btc_data['close'].values
 n = len(close)
@@ -116,7 +116,7 @@ def backtest(params, data):
     return {'total_return': total_return, 'trades': len(trades), 'win_rate': win_rate, 'sharpe': sharpe, 'max_dd': max_dd}
 
 # 批量回测
-print(f'\n回测 {len(strategies)} 个策�?..')
+print(f'\n回测 {len(strategies)} 个策略...')
 results = []
 for i, s in enumerate(strategies):
     r = backtest(s, close)
@@ -135,7 +135,7 @@ print('  Top 10 策略（按收益率排序）')
 print(f'{"=" * 60}')
 for i, r in enumerate(results[:10]):
     print(f'\n  #{i+1} {r["name"]}')
-    print(f'    收益�? {r["total_return"]:+.2%} | 交易: {r["trades"]}�?| 胜率: {r["win_rate"]:.0%} | 夏普: {r["sharpe"]:.2f} | 回撤: {r["max_dd"]:.1%}')
+    print(f'    收益率: {r["total_return"]:+.2%} | 交易: {r["trades"]}笔 | 胜率: {r["win_rate"]:.0%} | 夏普: {r["sharpe"]:.2f} | 回撤: {r["max_dd"]:.1%}')
     p = r['params']
     print(f'    参数: RSI={p.get("rsi_period","?")}, SMA=({p.get("sma_fast","?")},{p.get("sma_slow","?")}), SL={p.get("stop_loss","?")}, TP={p.get("take_profit","?")}')
 
@@ -143,10 +143,10 @@ for i, r in enumerate(results[:10]):
 positive = [r for r in results if r['total_return'] > 0]
 traded = [r for r in results if r['trades'] > 0]
 print('\n📊 统计:')
-print(f'  正收益策�? {len(positive)}/{len(results)} ({len(positive)/len(results)*100:.0f}%)')
-print(f'  有交易策�? {len(traded)}/{len(results)}')
+print(f'  正收益策略: {len(positive)}/{len(results)} ({len(positive)/len(results)*100:.0f}%)')
+print(f'  有交易策略: {len(traded)}/{len(results)}')
 if positive:
-    print(f'  最佳收�? {results[0]["total_return"]:+.2%}')
+    print(f'  最佳收益: {results[0]["total_return"]:+.2%}')
     print(f'  平均收益: {np.mean([r["total_return"] for r in positive]):+.2%}')
 
 # 保存结果
@@ -160,4 +160,4 @@ output = {
 Path('memory/nexus').mkdir(parents=True, exist_ok=True)
 with open('memory/nexus/backtest_results.json', 'w', encoding='utf-8') as f:
     json.dump(output, f, indent=2, ensure_ascii=False, default=str)
-print('\n�?回测结果已保�? memory/nexus/backtest_results.json')
+print('\n✅ 回测结果已保存: memory/nexus/backtest_results.json')
