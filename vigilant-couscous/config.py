@@ -25,11 +25,13 @@ DATA_SOURCE = {
 }
 
 # ===== 欧易交易 API（从环境变量读取，避免明文泄露）=====
+# 注意：模拟盘开关统一使用 OKX_SIMULATED（与 backend/core/okx_trade_service 一致）；
+# 早期版本曾用 OKX_DEMO，该变量已废弃，全仓不再读取。
 OKX_API = {
     "api_key": os.getenv("OKX_API_KEY", ""),
     "secret_key": os.getenv("OKX_SECRET_KEY", ""),
     "passphrase": os.getenv("OKX_PASSPHRASE", ""),
-    "demo": os.getenv("OKX_DEMO", "true").lower() == "true",
+    "demo": os.getenv("OKX_SIMULATED", "1") == "1",
 }
 
 # ===== GitHub API（从环境变量读取）=====

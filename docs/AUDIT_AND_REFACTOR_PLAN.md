@@ -1,0 +1,371 @@
+# quanttrading 重构审计与实施计划
+
+**阶段：第一阶段（扫描与审计）—— 本文件即交付物。本阶段不修改任何代码、不产生任何 commit。**
+日期：2026-10-16 ｜ 审计基准：远端 `main` @ `eb555e90d1`（本地磁盘副本已陈旧，见 §2.7）
+
+---
+
+## 0. 结论摘要
+
+仓库现状可以一句话概括：**一个活着的 FastAPI 量化服务（backend）+ 一个半死的 vendored AI 进化项目（vigilant-couscous）+ 两代前端 + 74 个 workflow 的治理草样**。具体数字：
+
+| 维度 | 现状 | 问题度 |
+|---|---|---|
+| Python 代码 | 19,246 行 / 88 文件（backend 12 + vc 59 + scripts 18 + tests 1，前端 0） | vc 占 82%，其中约 40% 是死代码或一次性脚本 |
+| 后端 API | 28 个路由（21 业务 + 10 vc + 7 system） | **4 个 vc 端点调用不存在的方法，实际不可用** |
+| 回测内核 | **4 份近乎相同的 RSI+SMA 回测实现** | 合并为 1 |
+| 进化引擎 | 7 个（GA 核心库 + 3 个并发包装 + RL + 永续进化 + 学习引擎） | 收敛为 1 核 + 2 可选 |
+| 死代码 | backend `vc_adapter.py`(76行)、vc `core/` 整包(1030行，import 即崩)、`strategy/` 3 个一次性脚本、前端 `app.js/styles.css`(700行孤儿)、`docs/` 前端重复拷贝 | 全部可删 |
+| 工作流 | 74 个（远端 73） | **约 51 个可删**（18 个 echo 纯桩 + 10 个 mon-* 空壳 + 10 个失效/重复 CI 变体 + 若干重复安全件 + 1 个必然损坏）；定时任务 ~120 次/天，超免费额度 3.5–5 倍 |
+| 测试 | 1 个 pytest 文件 5 用例；4 个安全测试脚本质量好但不在 CI | 覆盖率 ~0 |
+| 数据契约 | memory/nexus 13 个 JSON，**路径 bug 导致读写分裂**（strategy/memory/nexus vs memory/nexus） | 必修 |
+| 治理系统 | 种子已存在（meta-evolve 闭环雏形 + auto-search/okx-scanner 双通道发现） | 缺持久化、缺真实执行、缺反馈闭环 |
+
+**重构策略**：不推翻重写，采用"**先清障、再修约、后收敛、终进化**"的八阶段推进，每阶段一个 commit，全部过构建/lint/测试/冒烟门禁，任何阶段不改变对外业务行为（API 契约、端口、数据格式保持兼容）。
+
+---
+
+## 1. 审计范围与方法
+
+- 四路并行只读扫描：backend（12 文件全读）、vigilant-couscous（59 文件全读）、frontend/scripts/tests/docs/根配置、.github/workflows（74 文件全读）
+- 交叉验证：本地磁盘 vs 远端 API、导入链实测（venv 实跑）、API 契约逐方法核对（backend 调用 vs vc 实际方法名）
+- 审计中发现的全部结论均附文件:行号证据
+
+---
+
+## 2. 第一阶段审计报告
+
+### 2.1 入口与可运行命令
+
+| 入口 | 位置 | 状态 |
+|---|---|---|
+| **主服务（唯一活入口）** | `backend/main.py:34` 模块级 `app = FastAPI(...)`；`uvicorn backend.main:app --host 0.0.0.0 --port 8000`（README:25 / Dockerfile:34 / ci-smoke.yml:21 一致） | ✅ 可用 |
+| `python -m` 块 | `backend/main.py:148-152`（reload=True 开发模式；`API_HOST/API_PORT` 仅此处读取，CLI 启动时不生效） | ⚠️ 半可用 |
+| vc Web 控制台 | `vigilant-couscous/web/web_console.py`（stdlib :8765，13 API） | ❌ **Dockerfile CMD `python web_console.py` 路径失效**（实际在 web/ 下）；sys.path 插入自身目录，仅 cwd 巧合时可跑 |
+| vc 进化调度器 | `auto_evolve_scheduler.py --interval 15` | ⚠️ 可跑但危险：L142-178 每轮自动 `git pull/commit/push origin master`（vendored 进主仓后必须移除） |
+| vc 统一 CLI | `cli/start.py`（10 子命令） | ❌ 裸模块导入 + subprocess 相对路径，运行时大部分命令不可用 |
+| vc 集成 CLI | `cli/run_all.py` | ❌ 调用 LearningEngine 不存在的 API（L50/64/284），必败 |
+| vc 交互 demo | `cli/main.py` | ⚠️ 包式导入在 `python cli/main.py` 时失败降级；`--live` 是占位（L402） |
+| 前端 | 无构建系统，`backend/main.py:74-76` 静态挂载 `/app`，`/` 返回 index.html | ✅ 可用（Chart.js CDN） |
+
+**环境变量硬需求**：`API_AUTH_KEY`（无它所有交易类端点 503）——但 `.env.example` 和 README **均未列出**，部署必踩坑。`OKX_DEMO=true`（Dockerfile:27/devcontainer:45）是**死变量**，全仓无代码读取（真实开关 `OKX_SIMULATED`）。
+
+### 2.2 模块依赖关系
+
+```
+backend/main.py
+├── api/routes.py ──→ core/okx_data_service（requests+websockets 裸实现）
+│                    core/okx_trade_service（okx SDK，含 HMAC 私有 WS）
+│                    core/backtest_engine（pandas_ta）
+│                    indicators/indicator_engine（pandas_ta 反射 400+ 变体）
+├── api/vc_routes.py ──(sys.path 注入)──→ vigilant-couscous/:
+│       agi.agi_brain ✅ / agi.eternal_evolver ⚠️ / agi.continuous_learner ⚠️
+│       evolution.backtest_validator ✅ / agents.risk_manager ✅
+│       strategy.learning_engine ⚠️（且写入 strategy/memory/nexus 而非 memory/nexus）
+│       + 直接文件读写 memory/nexus/*.json（三层路径防护）
+└── core/{auth, rate_limiter, observability, resilience}
+
+vigilant-couscous 内部（半死半边）：
+auto_evolve_scheduler → multi_dim_evolve/self_programming/adversarial_training/
+                        meta_learner/memory_system/auto_researcher
+learning_loop（GA 核心库）← multi_dim_evolve / unified_evolve / cli/main
+backtest_validator ← multi_dim_evolve / unified_evolve / self_programming / vc_routes
+data/fetcher ← multi_dim_evolve / unified_evolve / self_programming / cli/*
+web/web_console ←（独立，引用 auto_trade【构造即崩】/ unified_evolve / backtest_validator）
+
+关键事实：
+· backend 导入链实测硬依赖仅 numpy/pandas/requests（scripts/verify_import_chain.py 断言成立）
+· 前端零调用 /api/vc —— vc 路由目前没有 UI 消费者
+· frontend/src 全仓无 /api/vc 调用；docs/ 下是前端整套重复拷贝
+```
+
+### 2.3 核心数据模型
+
+**后端无任何 Pydantic/dataclass/TypedDict**，全部裸 `dict` 传输，无输入校验。现存事实契约：
+
+| 契约 | 位置 | 结构 |
+|---|---|---|
+| K 线行 | routes.py:183,217；vc_routes.py:113；vc_adapter.py:35（**4 份逐字重复**） | `ts,open,high,low,close,vol,volCcy,volCcyQuote,confirm` |
+| 指标计算请求 | routes.py:167-174 | `inst_id, bar, indicators[], limit` |
+| 回测请求 | routes.py:201-209 | `inst_id, bar, strategy, params{}, limit` |
+| 回测结果 | backtest_engine.py:243-255 | `code, initial/final_capital, total_return_pct, buy_hold_return_pct, max_drawdown_pct, sharpe_ratio, total_trades, win_rate, trades[], equity_curve[]` |
+| 风控审批请求 | vc_routes.py:166-172 | `signal{symbol,confidence,action}, portfolio{total_value}` |
+| 指标注册条目 | indicator_engine.py:33-38 | `{name, params, callable, category}`（基础版）+ 400+ 参数变体 |
+| 追踪记录 | observability.py:41-46 | `trace_id, path, start_time, timestamp, duration_ms, status_code, end_time` |
+| AlertRule | observability.py:118-123 | `name, condition, message, severity, last_triggered, trigger_count` |
+| vc BacktestResult | vc evolution/backtest_validator.py:20-36 | `strategy_name, total_return, annual_return, sharpe_ratio, max_drawdown, win_rate, total_trades, profit_factor, calmar_ratio, sortino_ratio, avg_holding_days, passed, score, warnings, monthly_returns` |
+| vc RiskLimits | vc agents/risk_manager.py:26-33 | `max_position_pct, max_drawdown_pct, stop_loss_pct, take_profit_pct, daily_loss_limit_pct` |
+
+**memory/nexus 数据契约（13 个 JSON，全部键级已清点）**：`gh_strategy_library.json`（79 条策略，键 `[name,source,stars,stop_loss,timeframe,rsi_period,sma_fast,sma_slow,take_profit,rsi_oversold,rsi_overbought]`）、`version.json`、`evolution_state.json`、`evolve_result.json`、`daily_evolution.json`、`btc_evolution_result.json`、`learning_history.json`、`discovery_history.json`、`backtest_results.json`、`auto_trade_state.json`、`iterate_history.json`、`rl_optimized_result.json`、`rl_models/training_history.json`。
+
+### 2.4 重复代码（合并清单）
+
+| # | 重复项 | 位置 | 处置 |
+|---|---|---|---|
+| 1 | **K线→DataFrame 转换 ×4** | routes.py:183-187 / routes.py:217-221 / vc_routes.py:113-117 / vc_adapter.py:35-39（逐字相同） | 抽 `backend/core/frame_utils.py::candles_to_frame` |
+| 2 | **RSI+SMA+SL/TP 回测模拟器 ×4** | strategy/unified_evolve.py:_simulate(L56-108) / evolution/multi_dim_evolve.py:_run_sim(L300-343) / strategy/backtest_gh_strategies.py:backtest(L41-116) / evolution/backtest_validator.py:_run_backtest(L130-170) | 合并为单一回测内核（validator 为实现基准） |
+| 3 | multi_dim_evolve vs unified_evolve | 重复度 ~80%（取数→GA→验证→写 nexus） | 合并为一个引擎 + 两种配置（单币/多币） |
+| 4 | 双检锁单例 ×4 | okx_data_service:168 / okx_trade_service:221 / backtest_engine:258 / indicator_engine:309 | 抽 `core/singleton.py` 装饰器；顺带修"首参定死"缺陷 |
+| 5 | load_dotenv ×4 | main.py:32 / auth.py:16 / okx_data_service:17 / okx_trade_service:20 | 收敛到 `core/config.py` 单点加载 |
+| 6 | try→logger→通用错误 dict ×10 | vc_routes.py 全文 | 抽装饰器 `vc_endpoint` |
+| 7 | OKX 项目搜索 ×2 | auto-search.yml（13 关键词，每小时建 Issue）vs okx-scanner.yml（脚本 5 关键词，只存 artifact） | 合并为 gov/discover.py（见 §5） |
+| 8 | CodeQL ×2 | codeql.yml（远端唯一）vs sec-codeql.yml（**本地陈旧副本**，远端已删） | 本地删除即对齐 |
+| 9 | 前端三套拷贝 | frontend/（活）+ frontend/app.js+styles.css（死）+ docs/index.html+app.js+styles.css（重复） | 删两套死拷 |
+| 10 | 文档口径分裂 | README/architecture.md 说 lightweight-charts+65 工作流；wiki 说 Chart.js；实际 74→73、Chart.js | 统一（Phase 1） |
+
+### 2.5 死代码与孤儿模块（删除清单）
+
+**backend**：
+- `core/vc_adapter.py`（76 行）——全仓零导入，纯死代码
+
+**vigilant-couscous**（约 3,700 行可删）：
+- `core/` 整包 5 文件 1,030 行——全仓零导入，且 `__init__.py:10-11` 引用不存在的 config_validator/database，`import core` 必崩
+- `strategy/backtest_gh_strategies.py`、`strategy/analyze_strategies.py`、`strategy/github_scanner.py`——零导入者、导入即执行的一次性脚本
+- `web/visualize.py`——导入即执行 + 相对路径 subprocess 唤起
+- `agi/` 中 5 个仅被 `__init__.py` re-export、无任何调用方的模块：market_scanner / goal_manager / self_reflection / multi_modal_perception / auto_refactor（1,477 行）——注意：被动加载有成本（顶层 import numpy/openai try），建议 `__init__` 改懒加载
+- `trading/auto_trade.py`（413 行）——L70/74/75 类名错误（RiskManager/StrategyResearcher/SmartTrader 不存在，实际为 RiskManagerAgent/ResearcherAgent/TraderAgent），构造即 ImportError，事实上不可达
+- `cli/` 3 文件（933 行）——入口全损，能力已被 backend + gov 系统覆盖
+- `web/web_console.py`（520 行）——能力与 backend 重复，Docker 路径已失效；建议删（backend 即唯一 UI 服务）
+- 根级垃圾文件 ` m flutter_app`（1,453 字节，空格开头文件名，内容是误重定向的 git log）
+- `setup_scheduler.bat`——引用已删除的 weekly_evolve.py
+
+**scripts/**（14 个可删/可归档）：push_advanced/push_codespaces/push_community/push_phase2/push_remaining（一次性 bootstrap，历史使命已完成）、close_issues（破坏性）、create_project、enable_security、setup_repo、test_network（探测第三方镜像域名，与 BASELINE 安全口径矛盾）、test_okxcn（同）、check_ci（被 gh CLI 替代）、`__pycache__` 14 个 .pyc
+
+**前端/docs**：frontend/app.js + styles.css（700 行孤儿，操作不存在的 DOM）、docs/index.html + app.js + styles.css（前端整套重复）、docs/wiki 中 3 个死链接页
+
+### 2.6 缺失模块与配置（需新建）
+
+| 缺失项 | 影响 | 阶段 |
+|---|---|---|
+| `pyproject.toml` | publish.yml 必然失败；无 lint/type 配置事实标准（CI 用 `-o addopts=''` 空跑） | P1 |
+| `.dockerignore` | `COPY . .` 带入 .git/__pycache__/.pytest_cache/quanttrading.log/reports | P1 |
+| `.github/labeler.yml` | auto-label.yml 引用缺失（被 continue-on-error 掩盖） | P5 |
+| `LICENSE` | sec-license.yml 永远告警；开源治理生态的合法性基础 | P1 |
+| `API_AUTH_KEY` in .env.example/README | 部署必踩坑（503） | P1 |
+| `docs/evolution-log.md` | meta-evolve 首次运行才创建 | P7 |
+| `backend/mcp/` | 两份文档（copilot-instructions.md、wiki/Architecture.md）声称存在，实际不存在——要么删文档要么建模块 | P1 决策点 |
+| `SECURITY-NOTES` | requirements.txt 注释引用，全仓不存在（悬空引用） | P1 |
+| Pydantic 请求/响应模型 | 全部裸 dict，无校验 | P2 |
+| `tests/` 真实用例 | 5 用例覆盖 ~0%；4 个安全测试脚本（21/7/15 用例）质量好但硬编码 Windows 路径且不在 CI | P4 |
+| `gov/` 治理包 | 治理系统本体不存在（§5 设计） | P6-P7 |
+| `reports/` 持久化 | mon-*/q-* 10+10 个工作流输出全部 echo 后即失 | P5-P6 |
+
+### 2.7 ⚠️ 本地/远端一致性警告（实施前必读）
+
+- **本地磁盘副本已陈旧**：本地 74 个 workflow（含远端已删除的 `sec-codeql.yml`），远端 main 73 个为权威。本地 git 为 `master` 空 init、零提交、零 ref——**git 历史分析在本地不可用，一切以远端 API 为准**。
+- **实施第一步必须是重新对齐工作副本**（`git clone` 远端或 fetch 后 reset），否则 Phase 1 的推送会把已删除的 sec-codeql.yml 等旧文件复活。
+- `.git/config` remote URL 内嵌明文 PAT（`ghp_…`）——见 §8 安全事项。
+
+---
+
+## 3. 保留 / 合并 / 废弃总表
+
+### 3.1 代码模块
+
+| 模块 | 判定 | 理由 |
+|---|---|---|
+| backend/main.py + api/routes.py + core/{okx_data,okx_trade,backtest_engine,auth,rate_limiter,observability,resilience} + indicators/ | **保留**（resilience 的熔断/幂等从未使用——P2 接线或删） | 服务本体，行为契约 |
+| backend/api/vc_routes.py | **保留+修约** | 4 个端点方法名不匹配（evolve/get_report/daily_search_and_learn/get_seed_params），修约后可用 |
+| backend/core/vc_adapter.py | **删** | 零导入死代码 |
+| vc: agi/agi_brain, continuous_learner; agents/risk_manager; evolution/backtest_validator, learning_loop; strategy/learning_engine; data/fetcher, cache_manager; strategies/base_strategy; config.py | **保留** | backend 导入链 + 引擎本体 |
+| vc: agi/{eternal_evolver, adversarial_training, auto_researcher, meta_learner, memory_system, distributed_orchestrator, zero_shot_adapter, market_scanner, goal_manager, self_reflection, multi_modal_perception, auto_refactor} | **合并/降级** | eternal_evolver 用 `random.uniform` 冒充进化指标（L273-287）→ 删端点或重写；5 个无调用方模块 → `__init__` 懒加载；其余仅 scheduler 引用，随 P3 收敛 |
+| vc: evolution/{multi_dim_evolve, self_programming} + strategy/unified_evolve | **合并** | 与 learning_loop/backtest_validator 重复 80%，收敛为 1 引擎 + 配置 |
+| vc: evolution/rl_* | **保留为可选** | gymnasium/SB3 未装时优雅降级，已工作 |
+| vc: core/ 整包、cli/、web/、trading/、strategy/ 一次性脚本、web/visualize.py | **删** | 死代码/能力重复/入口全损 |
+| vc: agents/{researcher,trader,alert_manager,multi_timeframe,parallel_scheduler} | **保留（测试覆盖着）** | researcher 顶层 crewai import 靠 __init__ try 兜底 → 改函数内导入 |
+| frontend/index.html | **保留** | 唯一在役 UI |
+| frontend/app.js + styles.css、docs/{index.html,app.js,styles.css} | **删** | 孤儿/重复 |
+| scripts/ 4 个安全测试 + post_merge_check.py + okx_scanner.py | **保留并迁入** | 迁 tests/ + scripts/gov/，参数化路径，接 CI |
+| scripts/ 其余 14 个 | **删/归档** | 一次性 bootstrap 已完成历史使命 |
+
+### 3.2 工作流（远端 73 个 → 目标 ~20 个）
+
+| 判定 | 数量 | 文件 |
+|---|---|---|
+| **保留（核心）** | 8 | ci.yml、ci-smoke.yml、codeql.yml、docker.yml、meta-evolve.yml（升级）、audit.yml、sec-gatekeeper.yml、sec-secret-scan.yml |
+| **保留（有用，改造后）** | 12 | ci-cd.yml（去每次 push 自动建 Release）、sec-dep-review.yml、sec-permissions.yml、auto-label.yml（补 labeler.yml）、auto-stale.yml、rel-tag.yml、rel-publish.yml、deploy-staging.yml、deploy-pages.yml（改名为 backtest-report）、auto-search.yml（降频每日，并入 gov/discover）、mon-*/q-*（合并为 1 个 gov-metrics.yml）、dependabot.yml |
+| **删（echo 纯桩 18）** | 18 | deploy-canary/preview/rollback；rel-archive/docker/notify/pages/pypi/rollback/snapshot/validate；auto-assign/benchmark/changelog/dependabot/docs-sync/pr-lint/release-draft |
+| **删（mon-*/q-* 空壳 18）** | 18 | 全部 echo 后即失，改造合并进 gov-metrics.yml |
+| **删（失效/重复 CI 变体 9）** | 9 | ci-build/ci-test/ci-lint/ci-format/ci-typecheck/ci-matrix/ci-integration/ci-nightly/ci-docker |
+| **删（重复安全 4）** | 4 | sec-audit.yml（audit.yml 已覆盖）、sec-trivy.yml（exit-code 0 永不失败，ci.yml 的 Trivy 已上传 SARIF）、sec-scorecard.yml（结果不上传）、sec-license.yml（补 LICENSE 后删）、sec-zipslip.yml |
+| **删/重建（损坏 1）** | 1 | publish.yml（无 pyproject 必败 + twine 用 GITHUB_TOKEN 当 PyPI 密码必 403） |
+| **本地删（对齐远端 1）** | 1 | sec-codeql.yml（远端已删，本地陈旧副本） |
+
+> 定时任务从 ~120 次/天降到 ~10 次/天，Actions 用量回落至免费额度内。
+
+---
+
+## 4. 目标架构一：量化工作台（重构目标态）
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ 表现层  frontend/index.html（Chart.js SPA，唯一来源）           │  ← 删 app.js/docs 拷贝
+├──────────────────────────────────────────────────────────────┤
+│ API 层   backend/api/                                         │
+│   routes.py    行情/指标/回测/订单/历史（21 端点，Pydantic 化）  │
+│   vc_routes.py AI/风控/记忆（10 端点，修约 4 个）                │
+├──────────────────────────────────────────────────────────────┤
+│ 服务层   backend/core/                                        │
+│   okx_data_service（限速+重连）  okx_trade_service（限速+重连）  │
+│   backtest_engine ──────────────┐                            │
+│   indicator_engine（508 指标）   │ 共用单一回测内核             │
+│   auth / rate_limiter / observability / resilience（接线熔断幂等）│
+├──────────────────────────────────────────────────────────────┤
+│ 引擎层   vigilant-couscous/（清理后 ~35 文件）                   │
+│   evolution/（GA 核心库 + 回测验证内核 + 可选 RL）               │
+│   agi/（决策大脑 + 持续学习，__init__ 懒加载）                   │
+│   agents/（风控/研究/交易/告警）  strategy/（学习引擎）           │
+│   data/（多源获取 + 缓存，安全路径）  memory/（nexus 知识库）      │
+├──────────────────────────────────────────────────────────────┤
+│ 数据层   memory/nexus/*.json（契约冻结+版本化）  reports/        │
+└──────────────────────────────────────────────────────────────┘
+        ↕ 被 §5 治理系统持续发现/监控/学习/整合/演进
+```
+
+**重构不变量（硬约束）**：
+1. 对外 API 路径、方法、响应码、JSON 键名不变（修约的 4 个端点从"恒定失败"变为"真实返回"，属于缺陷修复而非行为变更）
+2. 端口 8000、静态挂载 `/app`、WS `/ws/market`+`/ws/trade` 不变
+3. memory/nexus 的 13 个 JSON 键结构不变（修路径 bug 是让读写指向同一文件，恢复设计意图）
+4. 环境变量名只增不减（`API_AUTH_KEY` 补进 .env.example；`OKX_DEMO` 死变量可删）
+
+---
+
+## 5. 目标架构二：自我演进的开源治理系统
+
+> 基于仓库 + GitHub 全量 API（REST / GraphQL / Actions / Webhooks / Apps，以下统称"GitHub API 面"）建设的自动化治理系统。定位：**量化工作台的"生态系统引擎"**——持续发现金融/AI Agent/量化领域热门项目，筛选、监控、学习、整合，并用治理结果反哺工作台自身演进。
+
+### 5.1 总体架构（七层闭环）
+
+```
+        ┌─────────────────────────────────────────────────────┐
+        │                 知识库 memory/knowledge/              │
+        │  projects(项目卡) metrics(度量) decisions(决策)        │
+        │  playbooks(打法) integrations(整合记录)                │
+        └──────┬──────────────────────────────────┬───────────┘
+               │ 读写                              │ 反馈
+   ┌───────────▼──────────┐              ┌────────▼─────────┐
+   │ ①发现 Discovery       │              │ ⑦演进 Evolution  │
+   │  GitHub Search API    │              │  meta-evolve v2  │
+   │  3 域 13+ 关键词      │              │  学习→反省→决策  │
+   │  topics/stars/活跃度  │              │  →行动→验证      │
+   └───────────┬──────────┘              └────────▲─────────┘
+               │ candidates.json                  │ proposals
+   ┌───────────▼──────────┐              ┌────────┴─────────┐
+   │ ②筛选 Scoring         │              │ ⑥整合 Integration│
+   │  7 维评分→A/B/C 分层   │              │  依赖升级/适配器 │
+   │  黑白名单 gov/config  │              │  /特性移植→PR    │
+   └───────────┬──────────┘              └────────▲─────────┘
+               │ shortlist.json                    │ approved
+   ┌───────────▼──────────┐              ┌────────┴─────────┐
+   │ ③监控 Monitoring      │              │ ⑤学习 Analysis   │
+   │  依赖版本/发布/仓库    │              │  浅克隆+依赖清单  │
+   │  健康/配额→异常建Issue│              │  +API面+质量扫描  │
+   └───────────┬──────────┘              └────────▲─────────┘
+               │ metrics/*.json                    │ project cards
+   ┌───────────▼──────────┐                        │
+   │ ④度量 Metrics        │────────────────────────┘
+   │  CI 成功率/覆盖率/性能 │
+   └──────────────────────┘
+```
+
+### 5.2 核心模块（`scripts/gov/` 包 + `.github/workflows/gov-*.yml`）
+
+| 层 | 模块 | 触发 | 输入 → 输出 | 关键实现 |
+|---|---|---|---|---|
+| ① 发现 | `gov/discover.py` | 每日 1 次（合并 auto-search+okx-scanner） | GitHub Search API → `reports/discovery/<date>.json`（去重、增量、3 域分类） | 关键词/topic/star 下限/活跃天数全在 `gov/config.yml`；命中知识库已有的自动跳过 |
+| ② 筛选 | `gov/score.py` | 发现后同 job | candidates → `reports/shortlist.json`（A/B/C 分层） | 7 维：star 趋势、提交新鲜度、issue 响应、许可证、依赖健康度、语言适配、维护状态；黑白名单 |
+| ③ 监控 | `gov/monitor.py` | 每日（合并 10 个 mon-*） | GitHub API + pip → `reports/metrics/<date>.json` |  watched 项目 release/version 跟踪；自身依赖 outdated/CVE；阈值越界 → 建 Issue（告警终于落地） |
+| ④ 度量 | `gov/metrics.py` | 每次 CI 后 / 每日汇总（合并 10 个 q-*） | Actions API + pytest-cov + 基准 → `reports/quality/<date>.json` |  CI 成功率/时长、覆盖率、复杂度、TODO、重复率；趋势入知识库 |
+| ⑤ 学习 | `gov/analyze.py` | shortlist A/B 级项目 | 浅克隆（depth=1）→ `memory/knowledge/projects/<name>.json` | 提取：依赖清单、公共 API 面（AST）、架构信号、质量摘要、许可证；**只读分析，不执行候选代码** |
+| ⑥ 整合 | `gov/integrate.py` | 每周 / 人工 dispatch | 已批准项目卡 → 分支 + PR（脚手架 + 适配器 + 测试） | 三类整合：依赖直采（requirements+Dependabot）、适配器模块（backend/core/adapters/<name>.py）、特性移植（受控 patch）；**一切变更走 PR，CI 是验证 harness** |
+| ⑦ 演进 | `gov/evolve.py` + `meta-evolve.yml` v2 | 每 6 小时 | 知识库 + metrics → `reports/evolution/<ts>.json` + PR/Issue | 学习（Actions 失败热点 + 新 Action 版本）→ 反省（上轮提案的 CI 结果）→ 决策（评分排序）→ 行动（低风险自动 PR：版本戳、度量收集器；高风险只建议）→ 验证（CI 结果回写知识库） |
+
+**依赖迭代管理**：自身依赖由 Dependabot（pip×2 + github-actions，已配置）承担 PR；`gov/monitor.py` 每月出一份《依赖健康报告》Issue（outdated 全量 + 冲突分析 + 升级顺序建议），把 14 个 PR 洪水收敛为 1 份可执行清单。
+
+### 5.3 关键数据流
+
+```
+GitHub API 面 ──①发现──→ candidates.json ──②筛选──→ shortlist.json
+                                                      │
+                                    ┌─────────────────┼──────────────────┐
+                                    ▼                 ▼                  ▼
+                            ③监控(持续)         ⑤学习(A/B级)        人工决策点
+                            metrics/*.json      project cards           │
+                                    │                 │                ▼
+                                    ▼                 ▼         ⑥整合 → PR → CI 门禁
+                            ④度量 quality/*.json ──→ 知识库 memory/knowledge/ ←──┐
+                                                      │                          │
+                                                      ▼                          │
+                                            ⑦演进 proposals ──→ 行动(PR/Issue) ──┘ CI 结果回写
+```
+
+**数据契约**（全部 JSON， schema 冻结在 `gov/schemas/`）：
+- `project card`：`{name, url, domain, score, tier, version_watched, deps[], api_surface[], quality{}, license, status: discovered|analyzed|approved|integrated|rejected, reason}`
+- `metric record`：`{date, ci_success_rate, avg_duration, coverage, alerts_open, deps_outdated, quota_used}`
+- `decision record`：`{ts, proposal, evidence[], action, pr_url, outcome, ci_result}`
+
+### 5.4 自我演进机制
+
+1. **记忆**：知识库是系统的长期记忆——每个项目的评分历史、每次整合的成败与原因、每轮 CI 的度量，全部结构化落盘（`memory/knowledge/`，随仓库版本化）。
+2. **反省**：每轮演进先读上一轮的 decision records——上轮的升级 PR 挂了吗？整合的特性被回滚了吗？失败原因归类（依赖冲突/测试挂/API 漂移）。
+3. **决策**：提案按"预期收益 × 成功率 × 风险"评分排序；低风险且历史成功率高的（如 Action 版本戳、度量收集器完善）自动执行，其余只建议。
+4. **行动与验证**：所有代码变更以 PR 形式提交，仓库自身的 CI（构建/lint/测试/冒烟）就是验证 harness；CI 结果回写知识库，形成"行动→验证→记忆"闭环。
+5. **边界**：自治仅限"读 + 提案 + 低风险 PR"；合并权始终在人（或未来的 auto-merge 规则：仅 trivial 版本戳 + 全绿 + 有回滚）。
+
+### 5.5 与仓库的协同关系
+
+| 治理系统 | 量化工作台 |
+|---|---|
+| 发现/学习的新库、新策略范式 | 经 ⑥整合 变成工作台的新能力（适配器/依赖/特性） |
+| ③监控 盯住的依赖与 GitHub Actions 版本 | 保持工作台"升得动"（升级 PR + 健康报告） |
+| ④度量 产出的 CI/覆盖率/性能趋势 | 就是工作台"跑得稳"的量化证据（替代现在 echo 即失的 mon-*/q-*） |
+| ⑦演进 的反省对象 | 首先是工作台自身的工作流与代码（meta-evolve 现有雏形直接升级） |
+| 知识库 `memory/knowledge/` | 与 nexus 策略库并列，成为 `/api/vc/memory` 的新数据源 |
+
+一句话：**工作台是产品，治理系统是让产品持续进化的生态系统；两者共享同一套 CI 验证 harness 和同一套知识库。**
+
+---
+
+## 6. 分阶段实施计划（每阶段 1 commit，门禁：构建 ✅ lint ✅ 测试 ✅ 冒烟 ✅）
+
+| 阶段 | 主题 | 关键动作 | 风险控制 |
+|---|---|---|---|
+| **P0** | 审计（本文档） | 无代码改动 | — |
+| **P1** | 对齐与清障 | 重新 clone 远端对齐工作副本；删死代码（§2.5 全清单：vc_adapter、vc/core/、cli/、web/、trading/、strategy 一次性脚本、前端孤儿、docs 拷贝、scripts 14 个、垃圾文件）；补 `.dockerignore`、`pyproject.toml`、`LICENSE`、`.env.example` 加 `API_AUTH_KEY`、删 `OKX_DEMO` 死变量；文档口径统一（65→73 工作流、Chart.js、删 mcp 声称或建模块） | 纯删除+配置，不动 import 链上的活代码；删后跑全套门禁 |
+| **P2** | backend 契约硬化 | 修 4 个 vc 端点方法名（evolve/get_report/daily_search_and_learn→learn_static 等真实 API/get_seed_params→get_seed_genes）；Pydantic 请求/响应模型；抽 `frame_utils`/`singleton`/`config` 去重；resilience 熔断+幂等接入 okx 服务（或删除未用件）；私有 WS 补重连；交易服务补限速 | 每步单测+冒烟；API 响应键名不变 |
+| **P3** | 引擎收敛 | 4 份回测模拟器合并为 1 内核；multi_dim_evolve+unified_evolve 合并为 1 引擎+配置；修 `strategy/memory/nexus` 路径 bug（`.parent.parent`）；删 eternal_evolver 端点或重写为真实度量；rl_models Windows 反斜杠路径规范化；`agi/__init__` 懒加载 | 保留 backtest_validator 为实现基准，逐模块对照输出 |
+| **P4** | 测试体系 | 4 个安全测试脚本迁入 `tests/`（路径参数化）；补 TestClient 端点测试（28 路由 × 认证矩阵）；回测正确性单测；接入 CI 并设覆盖率下限（先 40% 后 70%） | 先补测试再改代码的顺序保护 |
+| **P5** | 工作流治理收敛 | 按 §3.2 删 ~51 个；ci-cd 去自动发布（改 rel-tag 手动体系）；publish.yml 重建或删；补 labeler.yml；mon-*/q-* 合并为 gov-metrics.yml | 删一个跑一批，观察 3 天无回归再删下一批 |
+| **P6** | 治理系统核心 | 建 `scripts/gov/`（discover/score/monitor/metrics/analyze）+ `gov/config.yml` + schemas + `reports/` 持久化；gov-run.yml 每日编排 | 先只读后写；候选代码不执行 |
+| **P7** | 整合与演进闭环 | `gov/integrate.py`（PR 自动化）；meta-evolve v2（真实行动+CI 结果回写）；知识库接入 `/api/vc/memory` | 合并权在人；低风险自动 PR 白名单制 |
+| **P8** | 性能与可观测深化 | 指标导出（Prometheus 格式）、结构化日志、追踪面板、基准回归（deploy-pages 改名 backtest-report） | 基准数据先于优化动作 |
+
+**每阶段出口标准**：`python -m uvicorn backend.main:app` 起服 → `/health` ok → 28 路由冒烟（含 4 个修约端点验证）→ `pytest` 全绿 → flake8 干净 → CodeQL 无新告警 → Actions 用量不超预算。
+
+---
+
+## 7. 风险与约束
+
+1. **本地副本陈旧**（§2.7）：P1 第一步必须重新对齐，否则复活已删文件。
+2. **vc 是运行时依赖**：backend 经 sys.path 导入 vc 6 个模块——P3 删除任何 vc 文件前必须重跑导入链验证（`scripts/verify_import_chain.py`）。
+3. **行为不变量的验证手段**：P2 前先固化"契约快照"（28 路由的请求/响应样本存 `tests/fixtures/`），之后每个阶段 diff 快照。
+4. **eternal_evolver 的"进化"是随机数**：对外展示过 AI 进化指标——修约时需同步改前端展示（AGI 面板），避免"假指标"继续呈现。
+5. **Actions 配额**：治理系统自身也是消耗源——gov-* 全部低频化（日/周），单 job 合并多步骤。
+6. **候选代码安全**：⑤学习层只浅克隆+静态分析，**不在 CI 执行候选代码**；⑥整合的依赖进主 requirements 前过 pip-audit + Trivy。
+
+---
+
+## 8. 安全事项（⚠️ 需立即行动）
+
+1. **OKX API 三件套泄露**：本轮对话第三条长文本中出现了明文 `API Key: d3da6164-…` / `Secret Key: 5D0A3A9D…` / `Passphrase: aA11223344.`——**请立即到 OKX 账户删除该 Key 并重建**，同时检查近 7 天账单流水（`GET /api/v5/account/bills`）有无异常。明文出现在对话中即视为泄露。
+2. **GitHub PAT 泄露**：聊天明文出现过的经典 PAT（含 delete_repo）+ 本地 `.git/config` remote URL 内嵌的 PAT——请吊销并改用 credential helper；本地配置中的 PAT 用 `git remote set-url` 清除。
+3. **`.git/config` 不在 secret 扫描范围**：sec-secret-scan.yml 只扫 `*.py/*.yml/*.md`——P5 补一条 `.git/config` 检查（或迁到 gitleaks 全量）。
+
+---
+
+## 附：本阶段产出物清单
+
+- 本文档（唯一交付物，未提交、未改任何代码）
+- 四路只读审计原始报告（backend 12 文件 / vc 59 文件 / 前端脚本测试文档 / 74 工作流，均带文件:行号证据，可按需展开）
+
+**下一步**：确认本计划后，从 P1 开始实施——第一阶段 action 是"重新 clone 远端 + 删死代码清障"，我会在动手前再报一次删除清单确认。

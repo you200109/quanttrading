@@ -4,7 +4,6 @@
 - `backend/api/` - FastAPI routes (routes.py, vc_routes.py)
 - `backend/core/` - Core services (OKX data, trade, auth, resilience, observability)
 - `backend/indicators/` - 508 technical indicators (pandas-ta)
-- `backend/mcp/` - MCP server with 9 tools
 
 ## Frontend
 - Single-page HTML app with Chart.js
@@ -16,12 +15,9 @@
 - `agi/` - AGI brain, continuous learner, eternal evolver
 - `agents/` - Risk manager, trader, alert manager, parallel scheduler
 - `evolution/` - Backtest validator, RL environment, learning loop
-- `strategy/` - GitHub scanner, learning engine, unified evolve
-- `trading/` - Auto trade, auto iterate, hot reload
+- `strategy/` - Learning engine, unified evolve
 - `data/` - Fetcher, cache manager, live trader, portfolio manager
 - `memory/` - Persistent storage layer
-- `web/` - Web console, visualizer
-- `cli/` - Command line tools
 
 ## CI/CD Pipeline
 - CI: Matrix build (Python 3.11/3.12) + flake8 + pytest + merge check

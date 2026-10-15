@@ -1,6 +1,6 @@
 # QuantTrading - 量化交易可视化交互系统
 
-> OKX 实时行情 + 508 技术指标 + AI 交易进化系统 + 65 自动化工作流
+> OKX 实时行情 + 508 技术指标 + AI 交易进化系统 + 73 自动化工作流
 
 ## ✨ 功能特性
 
@@ -13,7 +13,7 @@
 - 📝 挂单、历史委托、成交明细、账单流水
 - 🔄 WebSocket 实时数据推送
 - 🤖 AI 交易进化系统（vigilant-couscous）
-- ⚙️ 65 个 GitHub Actions 自动化工作流
+- ⚙️ 73 个 GitHub Actions 自动化工作流
 
 ## 🚀 快速开始
 
@@ -32,10 +32,10 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 | 组件 | 技术 |
 |------|------|
 | 后端 | Python 3.12 + FastAPI + Uvicorn |
-| 前端 | HTML + CSS + JS + lightweight-charts |
+| 前端 | HTML + CSS + JS + Chart.js (CDN) |
 | 数据源 | OKX API (www.okx.com) |
 | 指标库 | pandas-ta (508 个指标) |
-| CI/CD | GitHub Actions (65 个工作流) |
+| CI/CD | GitHub Actions (73 个工作流) |
 
 ## 📚 文档
 

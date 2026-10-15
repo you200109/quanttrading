@@ -1,0 +1,31 @@
+[project]
+name = "quanttrading"
+version = "2.0.0"
+description = "OKX quantitative trading workbench: real-time market data, 508 technical indicators, backtesting and AI evolution modules"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "you200109" }]
+dependencies = [
+    "okx==2.1.2",
+    "pandas-ta==0.4.71b0",
+    "fastapi==0.143.2",
+    "uvicorn==0.54.0",
+    "websockets==17.2",
+    "pandas>=2.3.3,<3.0",
+    "numpy==2.2.6",
+    "requests==2.34.2",
+    "python-dotenv==1.2.4",
+    "dccd==3.8.1",
+    "psutil==7.2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8==7.4.1",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+]
+
+# 注意：本仓库当前不作为可分发的 Python 包构建（无 [build-system]），
+# 安装方式为 requirements.txt；包构建与发布流将在 P5 阶段重建。

@@ -1,0 +1,36 @@
+# 版本控制与 CI 配置（容器内不需要）
+.git/
+.github/
+.devcontainer/
+
+# Python 缓存与虚拟环境
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# 敏感文件（绝不进镜像；.env.example 仅含占位符，可保留）
+.env
+.env.*
+!.env.example
+
+# 测试与覆盖率产物（CI 在 GitHub runner 上运行，不依赖镜像）
+tests/
+.coverage
+htmlcov/
+
+# 文档（镜像内不需要）
+docs/
+*.md
+
+# 注意：以下目录必须在镜像中保留，请勿加入本文件：
+#   backend/          服务本体
+#   vigilant-couscous/ 运行时导入（vc_routes 经 sys.path 注入）
+#   frontend/         静态挂载 /app（index.html）
+#   scripts/          运维脚本
+#   requirements.txt / vigilant-couscous/requirements.txt
+#   memory/nexus 数据文件（运行时创建）

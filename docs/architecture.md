@@ -32,7 +32,7 @@
 
 | 层级 | 技术 | 说明 |
 |------|------|------|
-| 前端 | HTML + CSS + JS + lightweight-charts | 暗色主题，专业K线图表 |
+| 前端 | HTML + CSS + JS + Chart.js (CDN) | 暗色主题，专业K线图表 |
 | 后端 | Python 3.12 + FastAPI + Uvicorn | 异步API，自动文档 |
 | 数据源 | OKX API (www.okx.com) | 官方域名；如需镜像网关请经 OKX_API_HOST 覆盖并自行核实域名安全 |
 | 指标库 | pandas-ta 0.4.71b0 | 508个技术指标 |
@@ -52,12 +52,10 @@ quanttrading/
 │   │   └── indicator_engine.py    # 技术指标引擎
 │   └── main.py                # FastAPI入口
 ├── frontend/
-│   ├── index.html             # 主页面
-│   ├── styles.css             # 暗色主题
-│   └── app.js                 # 应用逻辑
+│   └── index.html             # 主页面（Chart.js CDN + 内联脚本）
 ├── vigilant-couscous/        # AI交易进化系统
 ├── docs/                     # 文档
 ├── scripts/                  # 运维脚本
-├── .github/workflows/        # 65个工作流
+├── .github/workflows/        # 73个工作流
 └── .env                      # 环境配置
 ```

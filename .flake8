@@ -1,0 +1,14 @@
+[flake8]
+# 与 CI（.github/workflows/ci.yml lint job）参数保持一致：
+#   flake8 backend/ vigilant-couscous/ --max-line-length=120 --select=E9,F63,F7,F82
+# 本地如需更严格检查可显式覆盖：flake8 --select=E,W,F --extend-ignore=...
+max-line-length = 120
+select = E9,F63,F7,F82
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info

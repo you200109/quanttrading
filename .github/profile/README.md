@@ -27,8 +27,7 @@ Quantitative trading visualization system with real-time market data, K-line cha
 #### Key Features
 - 508 technical indicators (pandas-ta)
 - 11 API endpoints for vc integration
-- 50 unit tests, 24% coverage
-- MCP server with 9 tools
+- Unit tests (pytest, backend + vc modules)
 - WebSocket real-time data
 - Backtesting with risk management
 
@@ -41,8 +40,8 @@ Quantitative trading visualization system with real-time market data, K-line cha
 ## 🏆 Achievements
 
 - Release v1.3.0 - Complete VC Integration
-- 5/5 merge check passed
-- 50 unit tests passed
+- Merge check passing
+- Unit tests passing in CI
 - 0 dependency conflicts
 - 0 syntax errors
 

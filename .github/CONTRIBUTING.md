@@ -91,8 +91,7 @@ QuantTrading/
 ├── backend/           # FastAPI 后端
 │   ├── api/           # API 路由
 │   ├── core/          # 核心服务
-│   ├── indicators/    # 指标引擎
-│   └── mcp/           # MCP 服务器
+│   └── indicators/    # 指标引擎
 ├── frontend/          # 前端页面
 ├── vigilant-couscous/ # AI 进化模块
 ├── scripts/           # 工具脚本

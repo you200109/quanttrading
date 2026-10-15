@@ -1,6 +1,6 @@
 # 基线记录
 
-日期：2026-10-15（深夜安全加固轮次后更新，main @ 24326f5c24）
+日期：2026-10-16（P1 对齐与清障轮次后更新；P0 审计文档见 docs/AUDIT_AND_REFACTOR_PLAN.md）
 
 ## Git
 - 提交数：35+
@@ -10,13 +10,14 @@
 - 开放 PR：0
 
 ## 代码
-- Python 文件：88（backend 12 + vigilant-couscous 59 + scripts/tests 等）
+- Python 文件：61（backend 11 + vigilant-couscous 42 + scripts 7 + tests 1；P1 删除死代码前为 88 / 19,246 行，删除 6,706 行）
 - 依赖数量：14 (requirements.txt，已固定版本)
 - vigilant-couscous 依赖：12（原为 257 个包的开发机 freeze，已按 pyproject 精简；
   实测 vc_routes 导入的全部模块在根依赖下完整工作，AGI/风控端点冒烟通过）
 
 ## 测试
-- 覆盖率：低（tests/ 存在 1 个测试文件，核心引擎经手工冒烟验证）
+- 覆盖率：低（tests/ 存在 1 个测试文件 + vc/tests 2 个文件共 55 用例，全部通过；
+  端点契约测试与覆盖率下限为 P4 阶段目标）
 - 冒烟验证（2026-10-15 本地，API_AUTH_KEY 认证后）：508 指标加载、12 个常用指标计算、
   ma_cross 回测（17 笔交易）、认证中间件 401 拦截（无 key）/ 放行（有 key）、
   健康检查 ok、AGI 状态接口真实出数（total_decisions/knowledge_entries）、
@@ -25,7 +26,9 @@
   - scripts/test_path_traversal.py：21/21（nexus 文件名攻击面：遍历/编码/绝对路径/UNC/点文件/NUL）
   - scripts/test_nexus_endpoint_e2e.py：7/7（真实路由函数端到端）
   - scripts/test_vc_data_paths.py：15/15（cache_manager/fetcher 路径构造 + 收敛 containment 断言）
-  - scripts/verify_import_chain.py：服务导入链不触及 data/fetcher 与 data/cache_manager
+  - scripts/verify_import_chain.py：服务导入链不触及 vc/data 四模块，已删模块零复活（13 项不变量）
+  - scripts/smoke_routes.py：16/16（真实 uvicorn 起服；公开端点 / 认证矩阵 401+503 /
+    nexus 路径遍历拒绝 / openapi 38 paths / 无 5xx）
 
 ## CI（两轮全量修复，main 全线绿）
 - 工作流数量：73（删除重复的 auto-search-okx.yml 与 sec-codeql.yml，各保留一个同名工作流）
@@ -77,7 +80,7 @@
 - 内存峰值：~140 MB（服务运行态实测）
 
 ## 代码质量
-- flake8 (E9,F63,F7,F82)：backend/ 与 tests/ 通过
+- flake8 (E9,F63,F7,F82)：backend/ 与 vigilant-couscous/ 通过（配置见 .flake8，与 CI 一致）
 
 ## OKX 连通性
 - API 网关：www.okx.com（官方域名；文档中的第三方镜像域名已移除）
@@ -85,16 +88,19 @@
 - 盘口数据：实时返回
 - WebSocket：已配置（含重连）
 
-## 性能
-- 指标引擎初始化：<0.1s（单例，508 指标）
-- 回测耗时：~0.02s (300 根 K 线)
-- 内存峰值：~140 MB（服务运行态实测）
-
-## 代码质量
-- flake8 (E9,F63,F7,F82)：backend/ 与 tests/ 通过
-
-## OKX 连通性
-- API 网关：www.okx.com（官方域名；文档中的第三方镜像域名已移除）
-- K 线数据：实时返回（沙箱环境不可达时 REST 超时 15s，属预期）
-- 盘口数据：实时返回
-- WebSocket：已配置（含重连）
+## P1 对齐与清障（2026-10-16，docs/AUDIT_AND_REFACTOR_PLAN.md 阶段 P1）
+- 工作副本重新 clone 自远端 main @ eb555e90d1（本地旧副本为空 init 已废弃）
+- 删除 39 项死代码/垃圾：backend/core/vc_adapter.py；vc core/cli/web/trading 四整包；
+  vc/Dockerfile + docker-compose.yml（CMD 指向已删 web/）；strategy 3 个一次性脚本；
+  frontend app.js/styles.css 孤儿；docs 前端三件重复拷贝；scripts 12 个一次性推送脚本；
+  垃圾文件 " m flutter_app"；.github 大写 PR 模板（GitHub 仅识别小写，Windows checkout 冲突源）
+- 保留修正：vc/data 整目录保留（portfolio_manager/live_trader 被 vc/tests 覆盖，审计曾漏列）；
+  vc/tests 保留（CI 实际执行）
+- 配置补齐：新增 pyproject.toml（无 build-system，发布流 P5 重建）、.flake8（与 CI 一致）、
+  .dockerignore、LICENSE（MIT，与 vc 一致）；.env.example 补 API_AUTH_KEY
+- 死变量清除：OKX_DEMO 全仓清零（Dockerfile/devcontainer/SECURITY.md 建议/vc config.py
+  改读 OKX_SIMULATED——该键无生产消费者，'demo' 键保留以不破坏 vc 测试断言）
+- 文档口径统一：README/architecture 65→73 工作流、lightweight-charts→Chart.js；
+  MCP 声称删除（copilot-instructions/CONTRIBUTING/profile/wiki，模块不存在）；
+  vc SUPPORT.md 修复失效命令与 you200109/- 坏链接；wiki 删死链与已删模块条目
+- 门禁：compileall ✅ / flake8 0+0 ✅ / pytest 5+50 ✅ / smoke 16/16 ✅

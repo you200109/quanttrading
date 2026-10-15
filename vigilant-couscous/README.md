@@ -39,8 +39,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/you200109/-.git
-cd self-evolution-trading
+git clone https://github.com/you200109/quanttrading.git
+cd quanttrading/vigilant-couscous
 
 # 创建虚拟环境
 python -m venv .venv
@@ -49,13 +49,6 @@ source .venv/bin/activate  # Linux/Mac
 
 # 安装依赖
 pip install -r requirements.txt
-pip install -e ".[dev]"
-
-# 启动 Web 控制台
-python web_console.py
-
-# 单次交易分析
-python auto_trade.py --once
 
 # 全域自动进化（每15分钟）
 python auto_evolve_scheduler.py --interval 15
@@ -76,27 +69,24 @@ GitHub学习 → 多维度进化(18任务) → 自我编程注入
 - **AI**: CrewAI + LangChain + OpenAI/Claude
 - **进化**: 遗传算法 + Stable-Baselines3 (PPO/DQN)
 - **数据**: Pandas + NumPy + CCXT
-- **Web**: Python HTTP Server + Chart.js
-- **CI/CD**: GitHub Actions (21个工作流)
-- **容器**: Docker + docker-compose
+- **Web**: 由主服务提供（FastAPI，见仓库根 README）
+- **CI/CD**: GitHub Actions（工作流在仓库根 .github/workflows/）
+- **容器**: Docker（根目录 Dockerfile）
 
 ## 项目结构
 
 ```
-self-evolution-trading/
+vigilant-couscous/
 ├── agi/                    # AGI 认知架构（15模块）
 ├── agents/                 # 多Agent协同
 ├── evolution/              # 进化引擎
 ├── strategies/             # 策略库
+├── strategy/               # 学习引擎与统一进化
 ├── data/                   # 数据管道
 ├── memory/                 # 记忆和知识库
 ├── reports/                # 日志和报告
 ├── tests/                  # 单元测试
-├── .github/workflows/      # 21个自动化工作流
-├── auto_trade.py           # 自动交易主循环
-├── auto_evolve_scheduler.py # 全域进化调度器
-├── web_console.py          # Web控制台
-└── Dockerfile              # 容器化部署
+└── auto_evolve_scheduler.py # 全域进化调度器
 ```
 
 ## 许可证

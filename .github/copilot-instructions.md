@@ -22,8 +22,7 @@ QuantTrading is a quantitative trading visualization system built on OKX exchang
 - `backend/api/` - FastAPI routes
 - `backend/core/` - Core services (OKX data, trade, auth, resilience)
 - `backend/indicators/` - 508 technical indicators (pandas-ta)
-- `backend/mcp/` - MCP server with 9 tools
-- `vigilant-couscous/` - AI evolution modules (AGI, agents, evolution, strategy, trading, memory)
+- `vigilant-couscous/` - AI evolution modules (AGI, agents, evolution, strategy, data, memory)
 - `frontend/` - Single-page HTML app
 - `scripts/` - Utility scripts
 - `tests/` - Unit tests
@@ -32,7 +31,7 @@ QuantTrading is a quantitative trading visualization system built on OKX exchang
 - API responses: {'code': 0, 'data': ...}
 - Environment variables in .env, loaded via python-dotenv
 - crewai is optional dependency, use lazy imports
-- OKX API uses demo mode by default (OKX_DEMO=true)
+- OKX API uses simulated mode by default (OKX_SIMULATED=1)
 - All sensitive data in .env, never hardcoded
 
 ## Testing

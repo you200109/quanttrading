@@ -53,7 +53,7 @@ This project includes the following security measures:
 ## Best Practices for Users
 
 1. **Never commit API keys** - Use `.env` file (already in `.gitignore`)
-2. **Use demo mode** - Set `OKX_DEMO=true` for testing
+2. **Use simulated mode** - Set `OKX_SIMULATED=1` for testing (no real orders)
 3. **Regularly rotate keys** - Update your API keys periodically
 4. **Review permissions** - Only grant necessary scopes to tokens
 5. **Enable 2FA** - Use two-factor authentication on your GitHub account
