@@ -3,7 +3,11 @@ import re
 import subprocess
 import sys
 
-os.chdir(r'C:\QuantTrading')
+# 本地开发机（Windows）优先使用固定路径；CI 环境下 actions/checkout 后
+# 当前目录即为仓库根目录，直接使用（修复 CI 中 chdir 硬编码路径崩溃问题）
+_LOCAL_DEV_PATH = r'C:\QuantTrading'
+if os.path.isdir(_LOCAL_DEV_PATH):
+    os.chdir(_LOCAL_DEV_PATH)
 
 print('=== 合并后检查 ===')
 print()
@@ -156,9 +160,10 @@ vc_dirs = set()
 for d in os.listdir('backend'):
     if os.path.isdir(os.path.join('backend', d)):
         main_dirs.add(d)
-for d in os.listdir('vigilant-couscous'):
-    if os.path.isdir(os.path.join('vigilant-couscous', d)):
-        vc_dirs.add(d)
+if os.path.isdir('vigilant-couscous'):
+    for d in os.listdir('vigilant-couscous'):
+        if os.path.isdir(os.path.join('vigilant-couscous', d)):
+            vc_dirs.add(d)
 
 duplicate_dirs = main_dirs & vc_dirs
 print(f'  同名目录: {len(duplicate_dirs)} 个')

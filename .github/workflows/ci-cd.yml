@@ -27,7 +27,6 @@ on:
 
 env:
   PYTHON_VERSION: '3.12'
-  NODE_VERSION: '20'
 
 # 需要创建 GitHub Release
 permissions:
@@ -83,8 +82,10 @@ jobs:
       - name: Create release archive
         run: |
           mkdir -p release
-          tar -czf release/quanttrading-${{ steps.version.outputs.version }}.tar.gz \
-            backend/ frontend/ config/ .env.example requirements.txt
+          # 仅打包仓库中实际存在的路径（config/ 等可选目录不存在时自动跳过）
+          ITEMS="backend frontend .env.example requirements.txt"
+          [ -d config ] && ITEMS="$ITEMS config"
+          tar -czf release/quanttrading-${{ steps.version.outputs.version }}.tar.gz $ITEMS
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -130,7 +131,7 @@ jobs:
           mkdir -p deploy_package
           cp -r backend/ deploy_package/
           cp -r frontend/ deploy_package/
-          cp -r config/ deploy_package/
+          [ -d config ] && cp -r config/ deploy_package/ || true
           cp .env.example deploy_package/ 2>/dev/null || true
           cp requirements.txt deploy_package/ 2>/dev/null || true
 
@@ -158,7 +159,7 @@ jobs:
           # 部署新版本
           cp -r backend/ $DEPLOY_DIR/
           cp -r frontend/ $DEPLOY_DIR/
-          cp -r config/ $DEPLOY_DIR/
+          [ -d config ] && cp -r config/ $DEPLOY_DIR/ || true
           cp .env.example $DEPLOY_DIR/ 2>/dev/null || true
           cp requirements.txt $DEPLOY_DIR/ 2>/dev/null || true
 
