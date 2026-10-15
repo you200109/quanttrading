@@ -102,7 +102,7 @@ kiwisolver==1.5.1
 kubernetes==36.0.3
 lance-namespace==0.13.0
 lance-namespace-urllib3-client==0.13.0
-lancedb==0.30.0
+lancedb==0.40.0
 langchain==1.4.5
 langchain-core==1.6.10
 langchain-openai==1.7.1
