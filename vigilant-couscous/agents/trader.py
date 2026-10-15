@@ -9,7 +9,10 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from crewai import Agent
+try:
+    from crewai import Agent
+except ImportError:
+    Agent = None
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +70,10 @@ class TraderAgent:
         self.order_history: list[Order] = []
         self.agent = self._create_agent()
 
-    def _create_agent(self) -> Agent:
+    def _create_agent(self):
         """创建 crewai Agent 实例"""
+        if Agent is None:
+            return None
         return Agent(
             role="交易执行员",
             goal="精准执行交易策略，优化订单执行质量，最大化风险调整后收益",
