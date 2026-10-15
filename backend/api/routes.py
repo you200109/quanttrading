@@ -5,11 +5,7 @@ FastAPI 后端路由
 - 指标接口: 指标列表、指标计算
 - WebSocket: 实时数据推送
 """
-import os
-import json
-import asyncio
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Optional
 
 from backend.core.okx_data_service import get_data_service

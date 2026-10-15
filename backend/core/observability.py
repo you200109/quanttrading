@@ -4,13 +4,12 @@
 - 实时告警：基于阈值的告警触发和 Issue 创建
 - 仪表盘：系统状态汇总数据
 """
-import os
 import time
 import uuid
 import logging
 import threading
 from contextvars import ContextVar
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 from datetime import datetime, timezone
 
 logger = logging.getLogger('Observability')

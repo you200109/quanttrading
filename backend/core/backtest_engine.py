@@ -10,7 +10,7 @@ import numpy as np
 import pandas_ta as ta
 import logging
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 logger = logging.getLogger('BacktestEngine')
 

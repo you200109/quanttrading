@@ -54,11 +54,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov
       - name: Run main system tests
-        run: python -m pytest tests/ -v --tb=short -o addopts=''
+        run: python -m pytest tests/ -v --tb=short -o addopts='' --cov=backend --cov-report=term --cov-fail-under=40
       - name: Run vc tests
         run: |
           cd vigilant-couscous
-          python -m pytest tests/ -v --tb=short -o addopts=''
+          python -m pytest tests/ -v --tb=short -o addopts='' --cov=. --cov-report=term --cov-fail-under=25
 
   merge-check:
     name: Post-Merge Check

@@ -7,9 +7,7 @@ import re
 import sys
 import json
 import logging
-from pathlib import Path
-from fastapi import APIRouter, Query
-from typing import Optional
+from fastapi import APIRouter
 
 from backend.api.models import VcBacktestRequest
 from backend.core.frame_utils import candles_to_frame

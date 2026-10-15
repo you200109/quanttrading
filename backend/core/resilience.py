@@ -5,14 +5,13 @@
 - 优雅关闭：安全释放资源
 - 资源限制：控制内存和 CPU 使用
 """
-import os
 import time
 import signal
 import hashlib
 import logging
 import threading
 from functools import wraps
-from typing import Dict, Optional, Callable, Any
+from typing import Dict, Callable, Any
 
 logger = logging.getLogger('Resilience')
 

@@ -8,8 +8,6 @@ strategy/memory/nexus。2026-10-16 P3a 修复为 parent.parent 并迁移数据�
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VC_ROOT = REPO_ROOT / 'vigilant-couscous'
 CONTRACT_NEXUS = (VC_ROOT / 'memory' / 'nexus').resolve()

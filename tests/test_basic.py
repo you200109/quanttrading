@@ -1,7 +1,6 @@
 """
 基础单元测试
 """
-import pytest
 import sys
 import os
 

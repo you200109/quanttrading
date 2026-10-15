@@ -89,6 +89,10 @@ ignore_missing_imports = true
 warn_return_any = true
 warn_unused_configs = true
 
+[tool.coverage.run]
+source = ["."]
+omit = ["tests/*", "__pycache__/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

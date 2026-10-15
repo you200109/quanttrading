@@ -8,7 +8,7 @@ import logging
 
 import pandas as pd
 import pandas_ta as ta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 import inspect
 
 logger = logging.getLogger('QuantTrading.indicators')

@@ -81,7 +81,7 @@ class BaseStrategy(ABC):
             添加了指标列的 DataFrame
         """
         try:
-            import pandas_ta as ta
+            import pandas_ta as ta  # noqa: F401  # 导入即向 DataFrame 注册 .ta 访问器（副作用导入）
         except ImportError:
             raise ImportError(
                 "pandas-ta 未安装，请执行: pip install pandas-ta"
