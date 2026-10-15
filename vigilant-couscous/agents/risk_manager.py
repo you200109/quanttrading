@@ -13,7 +13,11 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import numpy as np
-from crewai import Agent
+
+try:
+    from crewai import Agent
+except ImportError:
+    Agent = None
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +62,10 @@ class RiskManagerAgent:
         self.take_profit_levels: dict[str, float] = {}
         self.agent = self._create_agent()
 
-    def _create_agent(self) -> Agent:
+    def _create_agent(self):
         """创建 crewai Agent 实例"""
+        if Agent is None:
+            return None
         return Agent(
             role="风控总监",
             goal="严格控制交易风险，确保资金安全，在风险可控的前提下最大化收益",
