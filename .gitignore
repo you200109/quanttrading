@@ -24,8 +24,9 @@ search_results/
 
 # 运行时数据（代码执行产生，非契约文件；memory/nexus/*.json 契约除外）
 vigilant-couscous/memory/agi/
-vigilant-couscous/strategy/memory/
-# 注：strategy/memory/ 是 learning_engine ROOT 路径 bug 的产物（P3 修复后此行可移除）
+vigilant-couscous/memory/gh_cache/
+# 注：learning_engine/unified_evolve 的 ROOT 路径 bug 已于 P3a（2026-10-16）修复，
+# 历史产物 strategy/memory/ 已迁移合并至 memory/nexus 并删除（tests/test_nexus_paths.py 防复发）。
 
 # 构建
 release/

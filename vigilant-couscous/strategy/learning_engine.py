@@ -25,7 +25,11 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).parent
+# 数据根目录：本文件位于 vigilant-couscous/strategy/ 下，仓库数据契约为
+# vigilant-couscous/memory/nexus（与 vc_routes 的 /strategies 端点、
+# unified_evolve 等共用）。历史上曾误用 Path(__file__).parent（指向
+# strategy/），导致读写分裂到 strategy/memory/nexus，2026-10-16 P3a 修复。
+ROOT = Path(__file__).resolve().parent.parent
 NEXUS = ROOT / "memory" / "nexus"
 CACHE = ROOT / "memory" / "gh_cache"
 NEXUS.mkdir(parents=True, exist_ok=True)

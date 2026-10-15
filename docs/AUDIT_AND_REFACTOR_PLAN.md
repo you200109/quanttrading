@@ -333,6 +333,7 @@ GitHub API 面 ──①发现──→ candidates.json ──②筛选──→
 | **P0** | 审计（本文档） | 无代码改动 | — |
 | **P1** | 对齐与清障 | 重新 clone 远端对齐工作副本；删死代码（§2.5 全清单：vc_adapter、vc/core/、cli/、web/、trading/、strategy 一次性脚本、前端孤儿、docs 拷贝、scripts 14 个、垃圾文件）；补 `.dockerignore`、`pyproject.toml`、`LICENSE`、`.env.example` 加 `API_AUTH_KEY`、删 `OKX_DEMO` 死变量；文档口径统一（65→73 工作流、Chart.js、删 mcp 声称或建模块） | 纯删除+配置，不动 import 链上的活代码；删后跑全套门禁 |
 | **P2** | backend 契约硬化 | 修 4 个 vc 端点方法名（evolve/get_report/daily_search_and_learn→learn_static 等真实 API/get_seed_params→get_seed_genes）；Pydantic 请求/响应模型；抽 `frame_utils`/`singleton`/`config` 去重；resilience 熔断+幂等接入 okx 服务（或删除未用件）；私有 WS 补重连；交易服务补限速 | 每步单测+冒烟；API 响应键名不变 |
+| **P2 执行记录（2026-10-16，commit e351a36）** | a+b+c 已交付 | ①4 端点修约（P2a 9/9）；②Pydantic 模型 models.py（P2b 13/13，含指标名反射面白名单）；③frame_utils 收敛三处重复（逐字节一致性验证）。**剩余项（resilience 接线/私有 WS 重连/交易限速）移至 P8**——与性能可观测同主题，且改活服务行为需基准数据先行 | 四门禁全绿 + P2a/P2b 专项验证 |
 | **P3** | 引擎收敛 | 4 份回测模拟器合并为 1 内核；multi_dim_evolve+unified_evolve 合并为 1 引擎+配置；修 `strategy/memory/nexus` 路径 bug（`.parent.parent`）；删 eternal_evolver 端点或重写为真实度量；rl_models Windows 反斜杠路径规范化；`agi/__init__` 懒加载 | 保留 backtest_validator 为实现基准，逐模块对照输出 |
 | **P4** | 测试体系 | 4 个安全测试脚本迁入 `tests/`（路径参数化）；补 TestClient 端点测试（28 路由 × 认证矩阵）；回测正确性单测；接入 CI 并设覆盖率下限（先 40% 后 70%） | 先补测试再改代码的顺序保护 |
 | **P5** | 工作流治理收敛 | 按 §3.2 删 ~51 个；ci-cd 去自动发布（改 rel-tag 手动体系）；publish.yml 重建或删；补 labeler.yml；mon-*/q-* 合并为 gov-metrics.yml | 删一个跑一批，观察 3 天无回归再删下一批 |

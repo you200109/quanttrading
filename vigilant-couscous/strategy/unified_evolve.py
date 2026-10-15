@@ -24,7 +24,11 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-ROOT = Path(__file__).parent
+# 数据根目录：本文件位于 vigilant-couscous/strategy/ 下，仓库数据契约为
+# vigilant-couscous/memory/nexus（与 learning_engine、vc_routes 共用）。
+# 历史上曾误用 Path(__file__).parent（指向 strategy/），导致 gh_strategy_library
+# 等契约文件读写分裂，2026-10-16 P3a 修复。
+ROOT = Path(__file__).resolve().parent.parent
 NEXUS = ROOT / "memory" / "nexus"
 NEXUS.mkdir(parents=True, exist_ok=True)
 

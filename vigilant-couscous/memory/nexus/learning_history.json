@@ -1,4 +1,23 @@
 {
-  "repos": [],
-  "last_update": "2026-10-13T10:57:05.522182"
+  "repos": [
+    {
+      "full_name": "fasiondog/hikyuu",
+      "name": "hikyuu",
+      "stars": 3561,
+      "language": "C++",
+      "description": "An open-source, high-performance quantitative trading framework in C++/Python focused on strategy analysis and backtesting Trading model R&D · Ultra-fast engine · Efficient backtesting",
+      "url": "https://github.com/fasiondog/hikyuu",
+      "learned_at": "2026-10-16T02:58:52.726639"
+    },
+    {
+      "full_name": "je-suis-tm/quant-trading",
+      "name": "quant-trading",
+      "stars": 11002,
+      "language": "Python",
+      "description": "Python quantitative trading strategies including VIX Calculator, Pattern Recognition, Commodity Trading Advisor, Monte Carlo, Options Straddle, Shooting Star, London Breakout, Heikin-Ashi, Pair Tradin",
+      "url": "https://github.com/je-suis-tm/quant-trading",
+      "learned_at": "2026-10-16T02:58:51.763487"
+    }
+  ],
+  "last_update": "2026-10-16T03:03:59.060552"
 }
