@@ -232,7 +232,7 @@ tensorboard-data-server==0.7.2
 textual==8.2.8
 threadpoolctl==3.7.0
 tiktoken==0.12.0
-tokenizers==0.22.2
+tokenizers==0.23.3
 toml==0.10.2
 torch==2.14.1
 torchaudio==2.9.1
