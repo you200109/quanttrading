@@ -6,6 +6,10 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch: # 支持手动触发
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   search-and-analyze:
     runs-on: ubuntu-latest

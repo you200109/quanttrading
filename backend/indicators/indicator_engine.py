@@ -4,10 +4,14 @@
 - 支持 400+ 技术指标动态加载与计算
 - 按类别分组：趋势、动量、波动率、成交量、统计、形态
 """
+import logging
+
 import pandas as pd
 import pandas_ta as ta
 from typing import Dict, List, Optional, Any
 import inspect
+
+logger = logging.getLogger('QuantTrading.indicators')
 
 
 class IndicatorEngine:
@@ -213,62 +217,86 @@ class IndicatorEngine:
         if not info:
             raise ValueError(f'Indicator not found: {indicator_name}')
 
-        # 基础指标直接调用
+        # 基础指标：直接调用 pandas_ta 函数
         if info.get('callable'):
-            try:
-                result = info['callable'](df, **kwargs)
-                if isinstance(result, pd.DataFrame):
-                    df = pd.concat([df, result], axis=1)
-                elif isinstance(result, pd.Series):
-                    df[indicator_name] = result
-                return df
-            except Exception:
-                return df
+            return self._invoke_indicator(info['callable'], df, indicator_name, **kwargs)
 
-        # 扩展变体指标
+        # 扩展变体指标：通过 base 找到 pandas_ta 函数
         base = info.get('base')
         if base:
             base_func = getattr(ta, base, None)
             if base_func:
-                try:
-                    params = {}
-                    if 'length' in info:
-                        params['length'] = info['length']
-                    if 'fast' in info:
-                        params['fast'] = info['fast']
-                    if 'slow' in info:
-                        params['slow'] = info['slow']
-                    if 'std' in info:
-                        params['std'] = info['std']
-                    if 'k' in info:
-                        params['k'] = info['k']
-                    if 'd' in info:
-                        params['d'] = info['d']
-                    params.update(kwargs)
-                    # 根据函数签名自动传入正确的 Series 列
-                    try:
-                        sig = inspect.signature(base_func)
-                        first_params = list(sig.parameters.keys())
-                    except (ValueError, TypeError):
-                        first_params = ['close']
-                    series_args = []
-                    for p in first_params:
-                        if p in ('close', 'high', 'low', 'open', 'volume') and p in df.columns:
-                            series_args.append(df[p])
-                        else:
-                            break
-                    if not series_args:
-                        series_args = [df['close']]
-                    result = base_func(*series_args, **params)
-                    if isinstance(result, pd.DataFrame):
-                        for col in result.columns:
-                            df[f'{indicator_name}_{col}'] = result[col]
-                    elif isinstance(result, pd.Series):
-                        df[indicator_name] = result
-                    return df
-                except Exception:
-                    return df
+                return self._invoke_indicator(base_func, df, indicator_name,
+                                              params_from_info=info, **kwargs)
+            logger.warning(f'Indicator {indicator_name}: base function ta.{base} not found')
 
+        return df
+
+    # pandas_ta 指标函数签名中的价格列参数名
+    _PRICE_PARAMS = ('close', 'high', 'low', 'open', 'volume')
+    # 扩展变体指标 info 中可传递给 pandas_ta 的参数键
+    _INFO_PARAM_KEYS = ('length', 'fast', 'slow', 'std', 'k', 'd')
+
+    def _invoke_indicator(self, func, df: pd.DataFrame, name: str,
+                          params_from_info: Optional[dict] = None,
+                          **kwargs) -> pd.DataFrame:
+        """按 pandas_ta 函数签名自动匹配价格序列并调用。
+
+        修复说明：pandas_ta 的指标函数第一个位置参数是价格 Series（如 close），
+        而非整个 DataFrame；历史上直接传入 DataFrame 会导致 macd/bbands 等
+        静默返回 None、atr 等直接报参数错误，且异常被吞掉无任何日志。
+        """
+        try:
+            sig_params = list(inspect.signature(func).parameters.keys())
+        except (ValueError, TypeError):
+            sig_params = ['close']
+
+        # 1. 按签名顺序收集价格序列参数，遇第一个非价格参数即停止
+        args = []
+        rest_params = []
+        for p in sig_params:
+            if p in self._PRICE_PARAMS:
+                if p not in df.columns:
+                    logger.warning(
+                        f'Indicator {name}: required column "{p}" missing, skip')
+                    return df
+                args.append(df[p])
+            else:
+                rest_params.append(p)
+                break
+
+        # 2. 额外参数：调用方 kwargs 优先，其次扩展指标 info 中的参数
+        call_kwargs = dict(kwargs)
+        if params_from_info:
+            for key in self._INFO_PARAM_KEYS:
+                if (key in params_from_info and key in rest_params
+                        and key not in call_kwargs):
+                    call_kwargs[key] = params_from_info[key]
+
+        # 3. 调用并合并结果，任何失败都记录日志（量化服务绝不静默）
+        try:
+            result = func(*args, **call_kwargs)
+        except Exception as e:
+            logger.warning(f'Indicator {name} invocation failed: {type(e).__name__}: {e}')
+            return df
+
+        if result is None:
+            logger.warning(f'Indicator {name} returned None (data too short?)')
+            return df
+
+        try:
+            if isinstance(result, pd.DataFrame):
+                for col in result.columns:
+                    # 避免重复计算产生重复列名
+                    target = col if col not in df.columns else f'{name}_{col}'
+                    df[target] = result[col].values
+            elif isinstance(result, pd.Series):
+                df[name] = result.values
+            else:
+                logger.warning(
+                    f'Indicator {name} returned unexpected type {type(result).__name__}')
+        except Exception as e:
+            logger.warning(f'Indicator {name} result merge failed: {type(e).__name__}: {e}')
         return df
 
     def calculate_multiple(self, df: pd.DataFrame, indicator_names: List[str]) -> pd.DataFrame:

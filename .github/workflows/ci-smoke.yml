@@ -14,10 +14,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install minimal deps
-        run: pip install fastapi uvicorn python-dotenv
+      - name: Install dependencies
+        run: pip install -r requirements.txt
       - name: Start server and health check
         run: |
           python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
-          sleep 8
-          curl -s http://127.0.0.1:8000/health | grep -q 'ok' && echo 'Health check PASSED' || (echo 'Health check FAILED' && exit 1)
+          for i in $(seq 1 30); do
+            sleep 2
+            if curl -sf http://127.0.0.1:8000/health | grep -q 'ok'; then
+              echo 'Health check PASSED'
+              exit 0
+            fi
+          done
+          echo 'Health check FAILED'
+          exit 1

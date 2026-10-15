@@ -10,6 +10,9 @@ on:
 env:
   PYTHON_VERSION_DEFAULT: '3.12'
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Code Quality
@@ -34,10 +37,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ['3.11', '3.12']
-        exclude:
-          - os: windows-latest
-            python-version: '3.11'
+        # pandas-ta >=0.4.71b0 要求 Python >=3.12（见 README 技术栈），仅测试受支持版本
+        python-version: ['3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python ${{ matrix.python-version }}

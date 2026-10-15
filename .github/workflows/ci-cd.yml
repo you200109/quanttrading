@@ -29,6 +29,10 @@ env:
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '20'
 
+# 需要创建 GitHub Release
+permissions:
+  contents: write
+
 jobs:
   # ==================== 测试 ====================
   test:

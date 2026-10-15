@@ -32,7 +32,7 @@ async def agi_status():
         return {'code': 0, 'data': status}
     except Exception as e:
         logger.warning(f'AGI status failed: {e}')
-        return {'code': 0, 'data': {'status': 'not_available', 'error': str(e)}}
+        return {'code': 0, 'data': {'status': 'not_available', 'error': '模块加载失败，请查看服务端日志'}}
 
 
 @router.post('/agi/evolve')
@@ -45,7 +45,7 @@ async def agi_evolve(body: dict):
         return {'code': 0, 'data': result}
     except Exception as e:
         logger.error(f'AGI evolve failed: {e}')
-        return {'code': 1, 'msg': str(e)}
+        return {'code': 1, 'msg': '操作失败，请查看服务端日志'}
 
 
 @router.get('/agi/learning-report')
@@ -58,7 +58,7 @@ async def agi_learning_report():
         return {'code': 0, 'data': report}
     except Exception as e:
         logger.warning(f'AGI learning report failed: {e}')
-        return {'code': 0, 'data': {'status': 'not_available', 'error': str(e)}}
+        return {'code': 0, 'data': {'status': 'not_available', 'error': '模块加载失败，请查看服务端日志'}}
 
 
 # ==================== 策略与回测模块 ====================
@@ -129,7 +129,7 @@ async def run_vc_backtest(body: dict):
         }
     except Exception as e:
         logger.error(f'VC backtest failed: {e}')
-        return {'code': 1, 'msg': str(e)}
+        return {'code': 1, 'msg': '操作失败，请查看服务端日志'}
 
 
 # ==================== 风控模块 ====================
@@ -156,7 +156,7 @@ async def risk_status():
         }
     except Exception as e:
         logger.warning(f'Risk status failed: {e}')
-        return {'code': 0, 'data': {'status': 'not_available', 'error': str(e)}}
+        return {'code': 0, 'data': {'status': 'not_available', 'error': '模块加载失败，请查看服务端日志'}}
 
 
 @router.post('/risk/approve')
@@ -173,7 +173,7 @@ async def risk_approve_trade(body: dict):
         return {'code': 0, 'data': {'approved': approved, 'reason': reason}}
     except Exception as e:
         logger.error(f'Risk approve failed: {e}')
-        return {'code': 1, 'msg': str(e)}
+        return {'code': 1, 'msg': '操作失败，请查看服务端日志'}
 
 
 # ==================== 记忆存储模块 ====================
@@ -197,17 +197,26 @@ async def get_nexus_data():
 
 @router.get('/memory/nexus/{filename}')
 async def get_nexus_file(filename: str):
-    """获取记忆存储文件内容"""
-    nexus_dir = os.path.join(VC_ROOT, 'memory', 'nexus')
-    filepath = os.path.join(nexus_dir, filename)
-    if not os.path.exists(filepath):
+    """获取记忆存储文件内容（仅允许纯文件名，拒绝路径遍历）"""
+    # 安全校验 1：拒绝任何路径分隔符与相对路径片段
+    if (filename != os.path.basename(filename)
+            or '/' in filename or '\\' in filename
+            or filename in ('.', '..') or filename.startswith('.')):
+        return {'code': 1, 'msg': 'Invalid filename'}
+    nexus_dir = os.path.abspath(os.path.join(VC_ROOT, 'memory', 'nexus'))
+    filepath = os.path.abspath(os.path.join(nexus_dir, filename))
+    # 安全校验 2：解析后的绝对路径必须仍在 nexus 目录内
+    if not filepath.startswith(nexus_dir + os.sep):
+        return {'code': 1, 'msg': 'Invalid filename'}
+    if not os.path.isfile(filepath):
         return {'code': 1, 'msg': 'File not found'}
     try:
         with open(filepath, encoding='utf-8') as f:
             data = json.load(f)
         return {'code': 0, 'data': data}
     except Exception as e:
-        return {'code': 1, 'msg': str(e)}
+        logger.warning(f'Read nexus file {filename} failed: {type(e).__name__}')
+        return {'code': 1, 'msg': '文件读取失败，请查看服务端日志'}
 
 
 # ==================== GitHub 学习模块 ====================
@@ -227,7 +236,7 @@ async def github_learn(body: dict):
         }
     except Exception as e:
         logger.error(f'GitHub learn failed: {e}')
-        return {'code': 1, 'msg': str(e)}
+        return {'code': 1, 'msg': '操作失败，请查看服务端日志'}
 
 
 @router.get('/github/seeds')

@@ -60,8 +60,10 @@ async def trace_middleware(request: Request, call_next):
         response = await call_next(request)
         end_trace(response.status_code)
         return response
-    except Exception as e:
-        end_trace(500, {'error': str(e)})
+    except Exception:
+        # 异常详情只进服务端日志，不写入可被 /api/system/traces 读出的追踪记录
+        logger.exception(f'Unhandled error on {path}')
+        end_trace(500)
         raise
 
 # 挂载路由

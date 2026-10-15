@@ -1,34 +1,44 @@
-# QuantTrading - Python 依赖清单（统一版本，消除合并冲突）
-# OKX 交易所 SDK
-okx>=2.1.2
+# QuantTrading - Python 依赖清单（固定版本，保证构建可复现）
+#
+# 已知上游约束（安全相关，详见 SECURITY-NOTES）：
+# 1. okx==2.1.2 精确锁定 urllib3==1.26.12，导致 urllib3 相关 CVE 暂无法通过
+#    升级依赖消除；缓解措施为网络层出口控制（仅放行 OKX 官方域名）。
+#    待 okx SDK 发布放开 urllib3 约束的版本后同步升级。
+# 2. pandas 锁定 <3.0：pandas 3.0 为破坏性大版本，pandas-ta / dccd 等
+#    量化依赖链尚未适配，避免 CI 与本地环境漂移。
+#
+# 版本升级一律通过 Dependabot PR 进行，合并前须跑通 CI 全量测试。
+
+# OKX 交易所 SDK（注意：上游锁定 urllib3==1.26.12）
+okx==2.1.2
 
 # 技术指标库
-pandas-ta>=0.4.71b0
+pandas-ta==0.4.71b0
 
 # Web 框架
-fastapi>=0.100.0
-uvicorn>=0.54.0
+fastapi==0.143.2
+uvicorn==0.54.0
 
 # WebSocket
-websockets>=15.0.1
+websockets==17.2
 
 # 数据处理
-pandas>=2.3.3
-numpy>=2.2.6
+pandas>=2.3.3,<3.0
+numpy==2.2.6
 
 # HTTP 请求
-requests>=2.34.2
+requests==2.34.2
 
 # 环境变量管理
-python-dotenv>=1.2.4
+python-dotenv==1.2.4
 
 # 历史数据回补
-dccd>=2.3.1
+dccd==3.8.1
 
 # 系统监控
-psutil>=7.2.2
+psutil==7.2.2
 
 # 代码质量
-flake8>=7.0.0
-pytest>=9.1.1
-pytest-cov>=5.0.0
+flake8==7.4.1
+pytest==9.1.1
+pytest-cov==7.1.0
