@@ -9,6 +9,12 @@ AGI 永续进化引擎 - 永不停止的自我迭代
 - 永续循环：永不停止的进化循环
 - 突变创新：随机引入全新概念
 - 跨域迁移：将其他领域的成功模式迁移到交易
+
+2026-10-16 P3b：进化改进度由 random.uniform 假度量改为真实系统状态增量
+（策略库通过数/库规模/风控覆盖/内化数/语义记忆/归档目标/发现数，
+数据源全部文件可查）；四个 _evolve_* 方法各自执行真实动作
+（参数入库/风控审计修复/记忆巩固/目标治理）；_last_system_state 持久化，
+支撑 _self_assess 的跨周期增长评估；突变适用度静态化。
 """
 
 import hashlib
@@ -27,6 +33,16 @@ ROOT = Path(__file__).parent.parent
 MEMORY = ROOT / "memory" / "agi"
 MEMORY.mkdir(parents=True, exist_ok=True)
 ETERNAL_LOG = MEMORY / "eternal_evolution.jsonl"
+
+# 2026-10-16 P3b：真实系统状态度量的数据源。
+# 与 strategy/learning_engine（NEXUS）、evolution/learning_loop（memory/iterations）、
+# agi/memory_system（memory/agi/memory_system.json）的仓库数据契约一致。
+STRATEGY_LIB = ROOT / "memory" / "nexus" / "gh_strategy_library.json"
+ITERATIONS_DIR = ROOT / "memory" / "iterations"
+SEMANTIC_FILE = MEMORY / "memory_system.json"
+GOAL_ARCHIVE = MEMORY / "goal_archive.json"
+DEFAULT_STOP_LOSS = 0.05
+DEFAULT_TAKE_PROFIT = 0.15
 
 
 @dataclass
@@ -109,6 +125,37 @@ class EternalEvolver:
         {"concept": "quantum_mechanics", "source": "physics", "applicability": 0.3},
     ]
 
+    # 2026-10-16 P3b：突变创新的适用度由突变类型静态决定（原 random.uniform 假度量）
+    MUTATION_APPLICABILITY = {
+        "参数空间扩展": 0.70,
+        "新指标引入": 0.75,
+        "策略融合": 0.65,
+        "时间框架变换": 0.60,
+        "数据源扩展": 0.55,
+        "模型架构变异": 0.50,
+    }
+
+    # 进化改进度 = 真实系统状态增量的加权和（原四处 random.uniform 假度量）。
+    # 每个维度按 _NORMALIZE 归一化到 [0,1]，无真实增量时改进度为 0（诚实的"无改进"）。
+    DOMAIN_WEIGHTS = {
+        "strategy_creation": {"library_size": 0.35, "risk_covered": 0.15,
+                              "passed_strategies": 0.25, "internalized": 0.10,
+                              "semantic_memory": 0.05, "discoveries": 0.10},
+        "risk_management": {"risk_covered": 0.45, "passed_strategies": 0.20,
+                            "library_size": 0.10, "semantic_memory": 0.15,
+                            "internalized": 0.05, "discoveries": 0.05},
+        "cognitive_architecture": {"semantic_memory": 0.40, "internalized": 0.30,
+                                   "passed_strategies": 0.10, "library_size": 0.05,
+                                   "risk_covered": 0.05, "discoveries": 0.10},
+    }
+    DEFAULT_WEIGHTS = {"library_size": 0.25, "risk_covered": 0.15,
+                       "passed_strategies": 0.15, "internalized": 0.10,
+                       "semantic_memory": 0.10, "archived_goals": 0.15,
+                       "discoveries": 0.10}
+    _NORMALIZE = {"library_size": 3, "risk_covered": 3, "passed_strategies": 2,
+                  "internalized": 2, "semantic_memory": 3, "archived_goals": 3,
+                  "discoveries": 3}
+
     def __init__(self):
         self.goals: list[EvolutionGoal] = []
         self.records: list[EvolutionRecord] = []
@@ -116,6 +163,7 @@ class EternalEvolver:
         self.cycle_count = 0
         self.total_improvement = 0.0
         self.discoveries_count = 0
+        self._last_system_state: dict | None = None  # 上一周期末的真实系统状态（跨周期增长度量）
         self._load()
 
     def eternal_cycle(self) -> dict:
@@ -230,21 +278,28 @@ class EternalEvolver:
         return scored[0][0]
 
     def _evolve_towards_goal(self, goal: EvolutionGoal) -> dict:
-        """朝着目标进化"""
+        """朝着目标进化
+
+        2026-10-16 P3b：improvement 由真实系统状态增量计算（_measure_improvement），
+        四个 _evolve_* 方法各自执行真实动作（参数入库/风控审计修复/记忆巩固/目标治理），
+        不再返回 random.uniform 假度量。
+        """
         goal.attempts += 1
         goal.status = "in_progress"
 
         before_state = self._capture_state()
+        before_system = self._system_state()
 
-        # 根据领域选择进化策略
-        if goal.domain == "strategy_creation":
-            improvement = self._evolve_strategy(goal)
-        elif goal.domain == "risk_management":
-            improvement = self._evolve_risk(goal)
-        elif goal.domain == "cognitive_architecture":
-            improvement = self._evolve_cognition(goal)
-        else:
-            improvement = self._evolve_generic(goal)
+        # 根据领域选择进化策略（真实动作）
+        action = {
+            "strategy_creation": self._evolve_strategy,
+            "risk_management": self._evolve_risk,
+            "cognitive_architecture": self._evolve_cognition,
+        }.get(goal.domain, self._evolve_generic)
+        action(goal)
+
+        after_system = self._system_state()
+        improvement = self._measure_improvement(before_system, after_system, goal.domain)
 
         after_state = self._capture_state()
 
@@ -270,21 +325,151 @@ class EternalEvolver:
 
         return {"improvement": improvement, "goal": goal.description}
 
-    def _evolve_strategy(self, goal: EvolutionGoal) -> float:
-        """进化策略"""
-        return random.uniform(0.01, 0.08)
+    def _evolve_strategy(self, goal: EvolutionGoal):
+        """策略创建进化：把已发现参数真实并入策略库
 
-    def _evolve_risk(self, goal: EvolutionGoal) -> float:
-        """进化风控"""
-        return random.uniform(0.005, 0.05)
+        真实动作 = LearningEngine.integrate_params()（本地文件写入，无网络）。
+        改进度由 _measure_improvement 按策略库真实增量计算。
+        """
+        try:
+            from strategy.learning_engine import LearningEngine
+            added = LearningEngine().integrate_params()
+            logger.info(f"策略进化[{goal.description[:30]}]: 参数入库新增 {added} 组")
+        except Exception as e:
+            logger.warning(f"策略进化动作失败: {e}")
 
-    def _evolve_cognition(self, goal: EvolutionGoal) -> float:
-        """进化认知架构"""
-        return random.uniform(0.02, 0.10)
+    def _evolve_risk(self, goal: EvolutionGoal):
+        """风控进化：审计策略库，为缺失止损/止盈的条目补默认风控参数
 
-    def _evolve_generic(self, goal: EvolutionGoal) -> float:
-        """通用进化"""
-        return random.uniform(0.005, 0.04)
+        真实动作 = 本地审计 + 修复写回（无网络）。
+        """
+        if not STRATEGY_LIB.exists():
+            return
+        try:
+            lib = json.loads(STRATEGY_LIB.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"风控审计读取策略库失败: {e}")
+            return
+        changed = 0
+        for s in lib.get("strategies", []):
+            if s.get("stop_loss") is None:
+                s["stop_loss"] = DEFAULT_STOP_LOSS
+                changed += 1
+            if s.get("take_profit") is None:
+                s["take_profit"] = DEFAULT_TAKE_PROFIT
+                changed += 1
+        if changed:
+            lib["last_risk_audit"] = datetime.now().isoformat()
+            STRATEGY_LIB.write_text(json.dumps(lib, indent=2, ensure_ascii=False), encoding="utf-8")
+            logger.info(f"风控进化: 修复 {changed} 个缺失风控参数的策略条目")
+
+    def _evolve_cognition(self, goal: EvolutionGoal):
+        """认知架构进化：记忆巩固（情景记忆 → 语义记忆）
+
+        真实动作 = MemorySystem.consolidate()（本地文件写入，无网络）。
+        """
+        try:
+            from agi.memory_system import MemorySystem
+            MemorySystem().consolidate()
+        except Exception as e:
+            logger.warning(f"认知进化动作失败: {e}")
+
+    def _evolve_generic(self, goal: EvolutionGoal):
+        """通用进化：目标去重 + 归档已完成目标
+
+        真实动作 = 本地目标治理（去重/归档写回，无网络）。
+        """
+        seen = set()
+        deduped = []
+        for g in self.goals:
+            if g.status == "pending" and g.description in seen:
+                continue
+            seen.add(g.description)
+            deduped.append(g)
+        removed = len(self.goals) - len(deduped)
+        self.goals = deduped
+
+        completed = [g for g in self.goals if g.status == "completed"]
+        if completed:
+            try:
+                archive = (json.loads(GOAL_ARCHIVE.read_text(encoding="utf-8"))
+                           if GOAL_ARCHIVE.exists() else {"goals": []})
+                archived_ids = {g.get("id") for g in archive.get("goals", [])}
+                new_entries = [
+                    {"id": g.id, "description": g.description, "domain": g.domain,
+                     "best_result": g.best_result,
+                     "completed": g.completed.isoformat() if g.completed else None}
+                    for g in completed if g.id not in archived_ids
+                ]
+                if new_entries:
+                    archive["goals"].extend(new_entries)
+                    GOAL_ARCHIVE.write_text(
+                        json.dumps(archive, indent=2, ensure_ascii=False), encoding="utf-8")
+            except Exception as e:
+                logger.warning(f"目标归档失败: {e}")
+        if removed:
+            logger.info(f"通用进化: 清理 {removed} 个重复目标")
+
+    # ---------- 真实系统状态度量（2026-10-16 P3b，替代 random.uniform 假度量） ----------
+
+    def _read_strategy_library(self) -> dict:
+        if not STRATEGY_LIB.exists():
+            return {"strategies": []}
+        try:
+            return json.loads(STRATEGY_LIB.read_text(encoding="utf-8"))
+        except Exception:
+            return {"strategies": []}
+
+    def _count_internalized(self) -> int:
+        if not ITERATIONS_DIR.exists():
+            return 0
+        return len(list(ITERATIONS_DIR.glob("internalized_*.json")))
+
+    def _count_semantic(self) -> int:
+        if not SEMANTIC_FILE.exists():
+            return 0
+        try:
+            return int(json.loads(SEMANTIC_FILE.read_text(encoding="utf-8")).get("semantic_count", 0))
+        except Exception:
+            return 0
+
+    def _count_archived_goals(self) -> int:
+        if not GOAL_ARCHIVE.exists():
+            return 0
+        try:
+            return len(json.loads(GOAL_ARCHIVE.read_text(encoding="utf-8")).get("goals", []))
+        except Exception:
+            return 0
+
+    def _system_state(self) -> dict:
+        """真实系统状态快照——全部指标文件可查，非随机数"""
+        lib = self._read_strategy_library()
+        strategies = lib.get("strategies", [])
+        return {
+            "library_size": len(strategies),
+            "risk_covered": sum(1 for s in strategies
+                                if s.get("stop_loss") is not None and s.get("take_profit") is not None),
+            "passed_strategies": sum(1 for s in strategies if s.get("backtest_passed") is True),
+            "internalized": self._count_internalized(),
+            "semantic_memory": self._count_semantic(),
+            "archived_goals": self._count_archived_goals(),
+            "discoveries": self.discoveries_count,
+        }
+
+    def _measure_improvement(self, before: dict, after: dict, domain: str) -> float:
+        """由真实系统状态增量计算改进度
+
+        每个维度增量按 _NORMALIZE 归一化到 [0,1] 后按领域权重加权；
+        无真实增量（或回退）时该维度不计入——改进度为 0 是诚实的"无改进"。
+        """
+        weights = self.DOMAIN_WEIGHTS.get(domain, self.DEFAULT_WEIGHTS)
+        total = 0.0
+        for key, weight in weights.items():
+            delta = after.get(key, 0) - before.get(key, 0)
+            if delta <= 0:
+                continue
+            total += weight * min(1.0, delta / self._NORMALIZE.get(key, 3))
+        return round(total, 6)
 
     def _random_mutation(self) -> Innovation | None:
         """随机突变 - 引入全新概念"""
@@ -303,7 +488,7 @@ class EternalEvolver:
             concept=f"突变: {mutation}",
             source="random_mutation",
             description=f"随机引入 {mutation} 概念",
-            applicability=random.uniform(0.3, 0.8),
+            applicability=self.MUTATION_APPLICABILITY.get(mutation, 0.5),
         )
         self.innovations.append(innovation)
         self.discoveries_count += 1
@@ -338,11 +523,19 @@ class EternalEvolver:
         novel_discoveries = sum(1 for r in recent_records if r.novel_discovery)
         trend = "improving" if avg_improvement > 0.01 else ("declining" if avg_improvement < 0 else "stable")
 
+        # 2026-10-16 P3b：附加上一周期以来的真实系统状态增长（跨周期口径）
+        system_growth = {}
+        if self._last_system_state:
+            current = self._system_state()
+            system_growth = {k: current[k] - self._last_system_state.get(k, 0)
+                             for k in current}
+
         return {
             "status": trend,
             "avg_improvement": round(avg_improvement, 4),
             "novel_discoveries": novel_discoveries,
             "total_improvement": round(self.total_improvement, 4),
+            "system_growth": system_growth,
             "recommendation": (
                 "进化势头良好，继续探索" if trend == "improving"
                 else "建议增加突变率，引入更多创新" if trend == "declining"
@@ -390,6 +583,8 @@ class EternalEvolver:
             "total_improvement": self.total_improvement,
             "discoveries": self.discoveries_count,
             "last_updated": datetime.now().isoformat(),
+            # 周期末真实系统状态，作为下一周期 _self_assess 跨周期增长的基线
+            "last_system_state": self._system_state(),
         }
         (MEMORY / "eternal_evolver.json").write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
@@ -401,6 +596,7 @@ class EternalEvolver:
                 self.cycle_count = data.get("cycle_count", 0)
                 self.total_improvement = data.get("total_improvement", 0)
                 self.discoveries_count = data.get("discoveries", 0)
+                self._last_system_state = data.get("last_system_state")
             except Exception:
                 pass
 

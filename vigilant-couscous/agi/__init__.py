@@ -24,22 +24,70 @@ AGI 自进化交易系统 - 完整认知架构
 - AutoRefactor - 自主代码理解和重构
 - MarketScanner - 全市场扫描和高频自适应
 - SelfProgrammingEngine - GitHub 代码搜索和注入
+
+2026-10-16 P3b：原 __init__  eager 全量导入 14 个子模块——每个子模块导入时
+都会执行 mkdir 等模块级副作用，且 7 个模块（distributed_orchestrator /
+zero_shot_adapter / market_scanner / goal_manager / self_reflection /
+multi_modal_perception / auto_refactor）无任何调用方，纯属拖累导入速度。
+现改为 PEP 562 __getattr__ 懒加载：import agi 不再触达任何子模块，
+属性访问 / from agi import X 时才按需导入对应子模块。
 """
 
-from .adversarial_training import AdversarialTraining, BattleResult, StrategyAgent
-from .agi_brain import AGIBrain, AGIDecision, MarketContext
-from .auto_refactor import AutoRefactor, CodeAnalysis, RefactorResult
-from .auto_researcher import AutoResearcher, ResearchHypothesis, ResearchPaper
-from .continuous_learner import ContinuousLearner, Experience, LearningUpdate
-from .distributed_orchestrator import AGIInstance, ConsensusResult, DistributedOrchestrator, Task
-from .eternal_evolver import EternalEvolver, EvolutionGoal, EvolutionRecord, Innovation
-from .goal_manager import Goal, GoalManager, GoalPriority, MarketRegime, RiskProfile
-from .market_scanner import MarketOpportunity, MarketScanner, OrderSuggestion
-from .memory_system import EpisodicMemory, MemorySystem, SemanticMemory, WorkingMemory
-from .meta_learner import LearningConfig, MetaKnowledge, MetaLearner
-from .multi_modal_perception import MultiModalPerception, UnifiedPerception
-from .self_reflection import Reflection, SelfReflectionEngine, TradeRecord
-from .zero_shot_adapter import AdaptationResult, MarketProfile, ZeroShotAdapter
+import importlib
+
+# name -> (submodule, attr)
+_LAZY_EXPORTS = {
+    # 认知层
+    "AGIBrain": ("agi_brain", "AGIBrain"),
+    "MarketContext": ("agi_brain", "MarketContext"),
+    "AGIDecision": ("agi_brain", "AGIDecision"),
+    "SelfReflectionEngine": ("self_reflection", "SelfReflectionEngine"),
+    "TradeRecord": ("self_reflection", "TradeRecord"),
+    "Reflection": ("self_reflection", "Reflection"),
+    "MultiModalPerception": ("multi_modal_perception", "MultiModalPerception"),
+    "UnifiedPerception": ("multi_modal_perception", "UnifiedPerception"),
+    "MemorySystem": ("memory_system", "MemorySystem"),
+    "EpisodicMemory": ("memory_system", "EpisodicMemory"),
+    "SemanticMemory": ("memory_system", "SemanticMemory"),
+    "WorkingMemory": ("memory_system", "WorkingMemory"),
+    "GoalManager": ("goal_manager", "GoalManager"),
+    "Goal": ("goal_manager", "Goal"),
+    "RiskProfile": ("goal_manager", "RiskProfile"),
+    "MarketRegime": ("goal_manager", "MarketRegime"),
+    "GoalPriority": ("goal_manager", "GoalPriority"),
+    # 进化层
+    "ContinuousLearner": ("continuous_learner", "ContinuousLearner"),
+    "Experience": ("continuous_learner", "Experience"),
+    "LearningUpdate": ("continuous_learner", "LearningUpdate"),
+    "AdversarialTraining": ("adversarial_training", "AdversarialTraining"),
+    "StrategyAgent": ("adversarial_training", "StrategyAgent"),
+    "BattleResult": ("adversarial_training", "BattleResult"),
+    "MetaLearner": ("meta_learner", "MetaLearner"),
+    "LearningConfig": ("meta_learner", "LearningConfig"),
+    "MetaKnowledge": ("meta_learner", "MetaKnowledge"),
+    "ZeroShotAdapter": ("zero_shot_adapter", "ZeroShotAdapter"),
+    "MarketProfile": ("zero_shot_adapter", "MarketProfile"),
+    "AdaptationResult": ("zero_shot_adapter", "AdaptationResult"),
+    # 协同层
+    "DistributedOrchestrator": ("distributed_orchestrator", "DistributedOrchestrator"),
+    "AGIInstance": ("distributed_orchestrator", "AGIInstance"),
+    "ConsensusResult": ("distributed_orchestrator", "ConsensusResult"),
+    "Task": ("distributed_orchestrator", "Task"),
+    "AutoResearcher": ("auto_researcher", "AutoResearcher"),
+    "ResearchPaper": ("auto_researcher", "ResearchPaper"),
+    "ResearchHypothesis": ("auto_researcher", "ResearchHypothesis"),
+    # 执行层
+    "AutoRefactor": ("auto_refactor", "AutoRefactor"),
+    "CodeAnalysis": ("auto_refactor", "CodeAnalysis"),
+    "RefactorResult": ("auto_refactor", "RefactorResult"),
+    "MarketScanner": ("market_scanner", "MarketScanner"),
+    "MarketOpportunity": ("market_scanner", "MarketOpportunity"),
+    "OrderSuggestion": ("market_scanner", "OrderSuggestion"),
+    "EternalEvolver": ("eternal_evolver", "EternalEvolver"),
+    "EvolutionGoal": ("eternal_evolver", "EvolutionGoal"),
+    "EvolutionRecord": ("eternal_evolver", "EvolutionRecord"),
+    "Innovation": ("eternal_evolver", "Innovation"),
+}
 
 __all__ = [
     "AGIBrain", "MarketContext", "AGIDecision",
@@ -57,3 +105,17 @@ __all__ = [
     "MarketScanner", "MarketOpportunity", "OrderSuggestion",
     "EternalEvolver", "EvolutionGoal", "EvolutionRecord", "Innovation",
 ]
+
+
+def __getattr__(name: str):
+    """PEP 562 懒加载：首次访问导出名时导入对应子模块"""
+    try:
+        submodule_name, attr = _LAZY_EXPORTS[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    module = importlib.import_module(f".{submodule_name}", __name__)
+    return getattr(module, attr)
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))

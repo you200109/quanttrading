@@ -124,11 +124,17 @@ class EvolutionEngine:
         self.internalized_strategies: list[dict] = []
         self.start_time: datetime | None = None
 
-    def initialize_population(self, param_template: dict[str, tuple[float, float]]):
+    def initialize_population(self, param_template: dict[str, tuple[float, float]],
+                              seed_genes: list[dict] | None = None):
         """初始化种群
 
         Args:
             param_template: 参数模板，key 为参数名，value 为 (min, max) 范围
+            seed_genes: 种子基因列表（格式 [{"params": {...}}]），注入到种群前部。
+                2026-10-16 P3b 修复：原调用方在 initialize_population 之后注入种子，
+                但 run_evolution 内部会重新 initialize_population 把种子清空，
+                导致 get_seed_genes() 取回的历史策略静默失效。改为在初始化末尾注入，
+                并经 run_evolution(seed_genes=...) 透传。
         """
         self.population = []
         for i in range(self.config.population_size):
@@ -146,9 +152,15 @@ class EvolutionEngine:
             )
             self.population.append(gene)
 
+        if seed_genes:
+            for i, seed in enumerate(seed_genes[:len(self.population)]):
+                self.population[i] = StrategyGene(
+                    id=f"seed_{i}", generation=0, params=seed.get("params", {}))
+
         self.generation = 0
         self.start_time = datetime.now()
-        logger.info(f"初始化种群完成，大小: {self.config.population_size}")
+        logger.info(f"初始化种群完成，大小: {self.config.population_size}"
+                    f"（种子基因 {min(len(seed_genes or []), self.config.population_size)} 个）")
 
     def evolve(self, fitness_func, data: Any) -> StrategyGene:
         """执行一轮进化
@@ -213,7 +225,8 @@ class EvolutionEngine:
         fitness_func,
         data: Any,
         param_template: dict[str, tuple[float, float]],
-        callback=None
+        callback=None,
+        seed_genes: list[dict] | None = None
     ) -> StrategyGene:
         """运行完整进化流程（400轮）
 
@@ -222,11 +235,13 @@ class EvolutionEngine:
             data: 评估数据
             param_template: 参数模板
             callback: 每轮回调函数
+            seed_genes: 种子基因列表（2026-10-16 P3b 新增透传，
+                修复"注入后被重新初始化清空"的静默失效）
 
         Returns:
             最终最优基因
         """
-        self.initialize_population(param_template)
+        self.initialize_population(param_template, seed_genes=seed_genes)
 
         no_improvement_count = 0
         best_overall = None

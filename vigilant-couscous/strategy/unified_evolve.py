@@ -15,11 +15,10 @@
 import json
 import logging
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -34,13 +33,9 @@ NEXUS.mkdir(parents=True, exist_ok=True)
 
 
 def get_btc_data():
-    """获取 BTC 训练数据"""
-    import config
-    from data.fetcher import DataFetcher
-    fetcher = DataFetcher(okx_url=config.DATA_SOURCE["okx_url"])
-    end = datetime.now().strftime('%Y-%m-%d')
-    start = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-    data = fetcher.fetch('BTC/USDT', start_date=start, end_date=end, source='ccxt')
+    """获取 BTC 训练数据（2026-10-16 P3b：委托 evolution/evolve_engine.fetch_history）"""
+    from evolution import evolve_engine
+    data = evolve_engine.fetch_history('BTC/USDT', days=365)
     logger.info(f"训练数据: {len(data)} 条")
     return data
 
@@ -58,58 +53,40 @@ def make_fitness(data):
     n = len(close)
 
     def _simulate(seg, rsi_period, sma_fast, sma_slow, sl, tp, os_, ob):
+        from evolution import backtest_core
         m = len(seg)
         if m < sma_slow + 2:
             return None
-        delta = np.diff(seg, prepend=seg[0])
-        gain = np.where(delta > 0, delta, 0)
-        loss = np.where(delta < 0, -delta, 0)
-        avg_gain = np.array([np.mean(gain[max(0, i-rsi_period+1):i+1]) for i in range(m)])
-        avg_loss = np.array([np.mean(loss[max(0, i-rsi_period+1):i+1]) for i in range(m)])
-        rs = np.divide(avg_gain, avg_loss, out=np.ones(m)*100, where=avg_loss != 0)
-        rsi = 100 - (100 / (1 + rs))
-        sma_f = pd.Series(seg).rolling(sma_fast).mean().values
-        sma_s = pd.Series(seg).rolling(sma_slow).mean().values
-        capital, position, entry, trades = 100000.0, 0.0, 0.0, []
-        for i in range(sma_slow, m):
-            price = seg[i]
+        rsi = backtest_core.calc_rsi(seg, rsi_period)
+        sma_f = backtest_core.calc_sma(seg, sma_fast)
+        sma_s = backtest_core.calc_sma(seg, sma_slow)
+
+        def _signal(i, rsi_arr, sf, ss, _vol, position):
+            # 原逻辑：NaN 预热期不交易；空仓时 RSI 超卖优先买入（置信度 0.85），
+            # 其次 SMA 金叉买入（0.65）；持仓时 RSI 超买或死叉平仓。
+            # 注意买卖互斥由持仓状态分流（与原 if/elif 结构一致）。
+            if np.isnan(sf[i]) or np.isnan(ss[i]):
+                return 'hold'
             if position > 0:
-                pnl = (price - entry) / entry
-                if pnl <= -sl or pnl >= tp:
-                    capital += position * price
-                    trades.append(pnl)
-                    position = 0
-                    continue
-            if position == 0 and not np.isnan(sma_f[i]) and not np.isnan(sma_s[i]):
-                if rsi[i] < os_ or (sma_f[i] > sma_s[i] and sma_f[i-1] <= sma_s[i-1]):
-                    conf = 0.85 if rsi[i] < os_ else 0.65
-                    size = capital * 0.2 * conf
-                    position = size / price
-                    entry = price
-                    capital -= size
-            elif position > 0 and not np.isnan(sma_f[i]) and not np.isnan(sma_s[i]):
-                if rsi[i] > ob or (sma_f[i] < sma_s[i] and sma_f[i-1] >= sma_s[i-1]):
-                    pnl = (price - entry) / entry
-                    capital += position * price
-                    trades.append(pnl)
-                    position = 0
-        if position > 0:
-            trades.append((seg[-1] - entry) / entry)
-            capital += position * seg[-1]
-        if len(trades) < 2:
+                if rsi_arr[i] > ob:
+                    return 'sell'
+                if sf[i] < ss[i] and sf[i-1] >= ss[i-1]:
+                    return 'sell'
+                return 'hold'
+            if rsi_arr[i] < os_:
+                return ('buy', 0.2 * 0.85)
+            if sf[i] > ss[i] and sf[i-1] <= ss[i-1]:
+                return ('buy', 0.2 * 0.65)
+            return 'hold'
+
+        # 2026-10-16 P3b：原内联模拟循环（gain/loss 扩展窗口 RSI + 逐 bar 循环）
+        # 收敛到 evolution/backtest_core.simulate，输出逐字节一致（黄金快照固化）
+        result = backtest_core.simulate(seg, sma_slow, _signal, sl, tp, 0.2,
+                                        initial_capital=100000.0,
+                                        rsi=rsi, sma_f=sma_f, sma_s=sma_s)
+        if len(result.trades) < 2:
             return None
-        total_ret = (capital - 100000) / 100000
-        capped = np.clip(np.array(trades), -0.5, 0.5)
-        avg, std = np.mean(capped), np.std(capped)
-        sharpe = (avg / std * np.sqrt(252)) if std > 0 else 0
-        sharpe = max(-3.0, min(3.0, sharpe))
-        cum = np.cumprod(1 + capped)
-        peak = np.maximum.accumulate(cum)
-        mdd = np.max((peak - cum) / (peak + 1e-8))
-        wr = sum(1 for t in trades if t > 0) / len(trades)
-        total_ret = max(-0.5, min(1.0, total_ret))
-        return (total_ret*0.30 + max(0, sharpe)/3*0.20 + (1-mdd)*0.20
-                + wr*0.20 + min(1, len(trades)/15)*0.10)
+        return backtest_core.fitness_score(result.trades, result.final_capital)
 
     def fitness(gene, _=None):
         rsi_period = max(2, int(gene.params.get('rsi_period', 14)))
@@ -151,23 +128,12 @@ def make_fitness(data):
 
 
 def run_evolution(data, generations, population, seed_genes=None, callback=None):
-    """执行遗传算法进化"""
-    from evolution.learning_loop import EvolutionConfig, EvolutionEngine, StrategyGene
-    config = EvolutionConfig(population_size=population, elite_count=max(3, population//8),
-                             mutation_rate=0.15, crossover_rate=0.7,
-                             max_generations=generations, early_stop_generations=80)
-    engine = EvolutionEngine(config=config)
-    template = {"rsi_period": (5, 30), "sma_fast": (3, 15), "sma_slow": (15, 60),
-                "stop_loss": (0.02, 0.15), "take_profit": (0.05, 0.40),
-                "rsi_oversold": (20, 40), "rsi_overbought": (60, 85)}
-    engine.initialize_population(template)
-
-    if seed_genes:
-        for i, seed in enumerate(seed_genes[:len(engine.population)]):
-            engine.population[i] = StrategyGene(id=f"seed_{i}", generation=0, params=seed.get("params", {}))
-
-    fitness = make_fitness(data)
-    best = engine.run_evolution(fitness_func=fitness, data=data, param_template=template, callback=callback)
+    """执行遗传算法进化（2026-10-16 P3b：委托 evolution/evolve_engine.run_ga）"""
+    from evolution import evolve_engine
+    engine, best = evolve_engine.run_ga(
+        data, evolve_engine.DEFAULT_GENE_TEMPLATE, make_fitness,
+        generations=generations, population=population,
+        early_stop_generations=80, seed_genes=seed_genes, callback=callback)
     return engine, best
 
 
@@ -213,7 +179,9 @@ def cmd_weekly(use_rl=False):
     logger.info("每周进化: 完整流程")
     # 1. GitHub 学习
     try:
-        from learning_engine import LearningEngine
+        # 2026-10-16 P3b：原 from learning_engine import 在仓库根无此模块
+        # （实际位于 strategy/），导入必然失败导致学习环节一直走 except 分支
+        from strategy.learning_engine import LearningEngine
         learner = LearningEngine()
         cycle = learner.full_cycle()
         logger.info(f"学习完成: 静态新增{cycle['static_added']}, 发现{sum(cycle['discovered'].values())}, 参数入库{cycle['params_added']}")
@@ -258,34 +226,22 @@ def _load_seeds():
 
 
 def _validate_and_update(params, fitness, data, mode="once"):
-    """回测验证 + 策略入库"""
+    """回测验证 + 策略入库（2026-10-16 P3b：验证门/入库委托 evolution/evolve_engine）"""
+    from evolution import evolve_engine
     if fitness < 0.3:
         logger.info(f"适应度 {fitness:.4f} < 0.3，跳过入库")
         return 0
-    passed = True
-    if data is not None and not data.empty:
-        try:
-            from evolution.backtest_validator import BacktestValidator
-            validator = BacktestValidator(data)
-            bt_result = validator.validate_strategy(params, f"evolved_{mode}")
-            passed = bt_result.passed
-            if passed:
-                logger.info(f"回测通过 (评分: {bt_result.score:.0f}, 夏普: {bt_result.sharpe_ratio:.2f})")
-            else:
-                logger.warning(f"回测未通过: {'; '.join(bt_result.warnings)}")
-        except Exception as e:
-            logger.warning(f"回测验证异常: {e}，跳过验证")
+    # unified 口径：数据不可用或验证异常时视为跳过验证（放行）
+    bt = evolve_engine.validate_params(data, params, f"evolved_{mode}")
+    passed = True if bt is None else bt['passed']
+    if bt is not None:
+        if passed:
+            logger.info(f"回测通过 (评分: {bt['score']:.0f}, 夏普: {bt['sharpe']:.2f})")
+        else:
+            logger.warning(f"回测未通过: {'; '.join(bt['warnings'])}")
     if not passed:
         return 0
-    lib_file = NEXUS / "gh_strategy_library.json"
-    lib = json.loads(lib_file.read_text(encoding="utf-8")) if lib_file.exists() else {"strategies": []}
-    name = f"evolved_{datetime.now().strftime('%m%d%H%M')}"
-    entry = {"name": name, "source": "self-evolution", "stars": int(fitness*1000), "backtest_passed": passed}
-    entry.update(params)
-    lib["strategies"].append(entry)
-    lib["total_strategies"] = len(lib["strategies"])
-    lib_file.write_text(json.dumps(lib, indent=2, ensure_ascii=False), encoding="utf-8")
-    logger.info(f"策略已入库: {name}")
+    evolve_engine.register_strategy(params, fitness, nexus_dir=NEXUS, passed=passed)
     return 1
 
 

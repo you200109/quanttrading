@@ -60,7 +60,9 @@ class AutoEvolveScheduler:
 
         # 1. GitHub 策略学习
         try:
-            from learning_engine import LearningEngine
+            # 2026-10-16 P3b：原 from learning_engine import 在仓库根无此模块
+            # （实际位于 strategy/），导入必然失败导致本步骤一直被静默跳过
+            from strategy.learning_engine import LearningEngine
             learner = LearningEngine()
             cycle = learner.full_cycle()
             logger.info(f'[1/8] GitHub学习: 静态新增{cycle.get("static_added",0)}, 发现{sum(cycle.get("discovered",{}).values())}')

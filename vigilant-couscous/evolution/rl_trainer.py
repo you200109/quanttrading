@@ -27,6 +27,11 @@ except ImportError:
 
 from .rl_environment import TradingEnvConfig, TradingEnvironment
 
+# 2026-10-16 P3b：原默认值 "memory/nexus/rl_models" 为 CWD 相对路径，
+# 从不同工作目录启动时模型会散落到任意位置。按 learning_engine / eternal_evolver
+# 既有约定锚定到仓库根（evolution/ 的上级）。
+DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "memory" / "nexus" / "rl_models"
+
 
 class TrainingCallback(BaseCallback):
     """训练回调 - 记录训练进度"""
@@ -54,10 +59,10 @@ class RLTrainer:
     def __init__(
         self,
         algorithm: str = "PPO",
-        model_dir: str = "memory/nexus/rl_models"
+        model_dir: str | Path | None = None
     ):
         self.algorithm = algorithm
-        self.model_dir = Path(model_dir)
+        self.model_dir = Path(model_dir) if model_dir else DEFAULT_MODEL_DIR
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self.model = None
         self.env = None

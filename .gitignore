@@ -32,3 +32,7 @@ vigilant-couscous/memory/gh_cache/
 release/
 deploy_package/
 node_modules/
+
+# 测试覆盖率产物
+.coverage
+coverage.xml

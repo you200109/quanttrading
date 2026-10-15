@@ -3,7 +3,6 @@
 覆盖: 配置管理、数据获取器、缓存管理器、风控管理器、基础策略
 """
 import sys
-import os
 from pathlib import Path
 from datetime import datetime
 import numpy as np

@@ -12,7 +12,7 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -141,42 +141,24 @@ class MultiDimEvolution:
 
     def _evolve_single(self, symbol: str, strategy_name: str,
                        generations: int, population: int) -> dict:
-        """单币种单策略进化"""
+        """单币种单策略进化（2026-10-16 P3b：GA 装配/运行/验证委托 evolution/evolve_engine）"""
         template = STRATEGY_TEMPLATES[strategy_name]
         data = self._fetch_data(symbol)
         if data.empty:
             return {"error": "数据获取失败"}
 
-        from evolution.learning_loop import EvolutionConfig, EvolutionEngine
-
-        config = EvolutionConfig(
-            population_size=population,
-            elite_count=max(2, population // 10),
-            mutation_rate=0.15,
-            crossover_rate=0.7,
-            max_generations=generations,
-            early_stop_generations=30,
-        )
-        engine = EvolutionEngine(config=config)
-        engine.initialize_population(template.params)
-
-        fitness_func = self._make_fitness(data, template)
-        best = engine.run_evolution(
-            fitness_func=fitness_func, data=data,
-            param_template=template.params, callback=None
-        )
+        from evolution import evolve_engine
+        engine, best = evolve_engine.run_ga(
+            data, template.params, lambda d: self._make_fitness(d, template),
+            generations=generations, population=population,
+            elite_count=max(2, population // 10), early_stop_generations=30)
 
         params = {k: (int(v) if isinstance(v, float) and v == int(v) and k.endswith('_period') else round(v, 4))
                    for k, v in best.params.items()}
 
-        passed = False
-        try:
-            from evolution.backtest_validator import BacktestValidator
-            validator = BacktestValidator(data)
-            bt_result = validator.validate_strategy(params, f"{symbol}_{strategy_name}")
-            passed = bt_result.passed
-        except Exception:
-            pass
+        # multi 口径：验证异常/无数据视为不通过
+        bt = evolve_engine.validate_params(data, params, f"{symbol}_{strategy_name}")
+        passed = bool(bt and bt['passed'])
 
         return {
             "symbol": symbol,
@@ -190,13 +172,9 @@ class MultiDimEvolution:
         }
 
     def _fetch_data(self, symbol: str) -> pd.DataFrame:
-        """获取行情数据"""
-        import config
-        from data.fetcher import DataFetcher
-        fetcher = DataFetcher(okx_url=config.DATA_SOURCE["okx_url"])
-        end = datetime.now().strftime('%Y-%m-%d')
-        start = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-        return fetcher.fetch(symbol, start_date=start, end_date=end, source='ccxt')
+        """获取行情数据（2026-10-16 P3b：委托 evolution/evolve_engine.fetch_history）"""
+        from evolution import evolve_engine
+        return evolve_engine.fetch_history(symbol, days=365)
 
     def _make_fitness(self, data: pd.DataFrame, template: StrategyTemplate):
         """构建策略特定的适应度函数"""
@@ -231,8 +209,14 @@ class MultiDimEvolution:
         sl = params.get('stop_loss', 0.05)
         tp = params.get('take_profit', 0.15)
         size = params.get('position_size', 0.2)
-        return self._run_sim(close, n, period, lambda i, rsi, sma_f, sma_s, vol:
-            'buy' if rsi[i] < os_ else ('sell' if rsi[i] > ob else 'hold'), sl, tp, size)
+        # 2026-10-16 P3b 意图修复：原 _run_sim 传入全零 rsi 数组，
+        # 导致 rsi[i]<os_ 恒真（每 bar 买入）、rsi[i]>ob 恒假（永不止盈），
+        # "RSI 均值回归"模板退化为单笔持有。此处传入真实 RSI 序列。
+        from evolution import backtest_core
+        rsi = backtest_core.calc_rsi(close, period)
+        return self._run_sim(close, n, period, lambda i, rsi_a, sf, ss, vol, _pos:
+            'buy' if rsi_a[i] < os_ else ('sell' if rsi_a[i] > ob else 'hold'), sl, tp, size,
+            rsi=rsi)
 
     def _sim_macd(self, close, params, n):
         fast = int(params.get('ema_fast', 12))
@@ -245,7 +229,7 @@ class MultiDimEvolution:
         ema_s = pd.Series(close).ewm(span=slow).mean().values
         macd = ema_f - ema_s
         signal = pd.Series(macd).ewm(span=sig).mean().values
-        return self._run_sim(close, n, max(fast, slow, sig), lambda i, rsi, sma_f, sma_s, vol:
+        return self._run_sim(close, n, max(fast, slow, sig), lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if macd[i] > signal[i] and macd[i-1] <= signal[i-1] else
             ('sell' if macd[i] < signal[i] and macd[i-1] >= signal[i-1] else 'hold'), sl, tp, size)
 
@@ -259,7 +243,7 @@ class MultiDimEvolution:
         std = pd.Series(close).rolling(period).std().values
         upper = sma + std_mul * std
         lower = sma - std_mul * std
-        return self._run_sim(close, n, period, lambda i, rsi, sma_f, sma_s, vol:
+        return self._run_sim(close, n, period, lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if close[i] < lower[i] else ('sell' if close[i] > upper[i] else 'hold'), sl, tp, size)
 
     def _sim_sma_cross(self, close, params, n):
@@ -268,11 +252,16 @@ class MultiDimEvolution:
         sl = params.get('stop_loss', 0.05)
         tp = params.get('take_profit', 0.15)
         size = params.get('position_size', 0.2)
-        pd.Series(close).rolling(fast).mean().values
-        pd.Series(close).rolling(slow).mean().values
-        return self._run_sim(close, n, slow, lambda i, rsi, sma_f, sma_s, vol:
-            'buy' if sma_f[i] > sma_s[i] and sma_f[i-1] <= sma_s[i-1] else
-            ('sell' if sma_f[i] < sma_s[i] and sma_f[i-1] >= sma_s[i-1] else 'hold'), sl, tp, size)
+        # 2026-10-16 P3b 意图修复：原 _run_sim 传入全零 sma 数组，
+        # 交叉条件恒假，"均线交叉"模板永不交易恒返回 0.01。
+        # 原先计算后丢弃的 rolling 结果在此真正投入使用。
+        from evolution import backtest_core
+        sma_f = backtest_core.calc_sma(close, fast)
+        sma_s = backtest_core.calc_sma(close, slow)
+        return self._run_sim(close, n, slow, lambda i, _rsi, sf, ss, vol, _pos:
+            'buy' if sf[i] > ss[i] and sf[i-1] <= ss[i-1] else
+            ('sell' if sf[i] < ss[i] and sf[i-1] >= ss[i-1] else 'hold'), sl, tp, size,
+            sma_f=sma_f, sma_s=sma_s)
 
     def _sim_momentum(self, close, params, n):
         lookback = int(params.get('lookback', 10))
@@ -281,7 +270,7 @@ class MultiDimEvolution:
         tp = params.get('take_profit', 0.15)
         size = params.get('position_size', 0.2)
         momentum = pd.Series(close).pct_change(lookback).values
-        return self._run_sim(close, n, lookback, lambda i, rsi, sma_f, sma_s, vol:
+        return self._run_sim(close, n, lookback, lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if momentum[i] > threshold else ('sell' if momentum[i] < -threshold else 'hold'), sl, tp, size)
 
     def _sim_volume(self, close, volume, params, n):
@@ -293,54 +282,25 @@ class MultiDimEvolution:
         size = params.get('position_size', 0.2)
         vol_ma = pd.Series(volume).rolling(vol_period).mean().values
         price_chg = pd.Series(close).pct_change().values
-        return self._run_sim(close, n, vol_period, lambda i, rsi, sma_f, sma_s, vol:
+        return self._run_sim(close, n, vol_period, lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if volume[i] > vol_ma[i] * vol_mult and price_chg[i] > price_th else
             ('sell' if volume[i] > vol_ma[i] * vol_mult and price_chg[i] < -price_th else 'hold'), sl, tp, size)
 
-    def _run_sim(self, close, n, min_period, signal_func, sl, tp, size):
-        """通用回测模拟"""
+    def _run_sim(self, close, n, min_period, signal_func, sl, tp, size, **indicators):
+        """通用回测模拟
+
+        2026-10-16 P3b：原内联执行循环 + 适应度公式收敛到
+        evolution/backtest_core（simulate + fitness_score）。
+        indicators 可传 rsi/sma_f/sma_s/vol 指标数组供 signal_func 使用。
+        """
+        from evolution import backtest_core
         if n < min_period + 2:
             return 0.0
-        rsi = np.zeros(n)
-        sma_f = np.zeros(n)
-        sma_s = np.zeros(n)
-        vol = np.zeros(n)
-        capital, position, entry, trades = 100000.0, 0.0, 0.0, []
-        for i in range(min_period, n):
-            price = close[i]
-            if position > 0:
-                pnl = (price - entry) / entry
-                if pnl <= -sl or pnl >= tp:
-                    capital += position * price
-                    trades.append(pnl)
-                    position = 0
-                    continue
-            signal = signal_func(i, rsi, sma_f, sma_s, vol)
-            if position == 0 and signal == 'buy':
-                position = capital * size / price
-                entry = price
-                capital -= capital * size
-            elif position > 0 and signal == 'sell':
-                pnl = (price - entry) / entry
-                capital += position * price
-                trades.append(pnl)
-                position = 0
-        if position > 0:
-            trades.append((close[-1] - entry) / entry)
-            capital += position * close[-1]
-        if len(trades) < 3:
+        result = backtest_core.simulate(close, min_period, signal_func, sl, tp, size,
+                                        initial_capital=100000.0, **indicators)
+        if len(result.trades) < 3:
             return 0.01
-        total_ret = (capital - 100000) / 100000
-        capped = np.clip(np.array(trades), -0.5, 0.5)
-        avg, std = np.mean(capped), np.std(capped)
-        sharpe = (avg / std * np.sqrt(252)) if std > 0 else 0
-        sharpe = max(-3.0, min(3.0, sharpe))
-        cum = np.cumprod(1 + capped)
-        peak = np.maximum.accumulate(cum)
-        mdd = np.max((peak - cum) / (peak + 1e-8))
-        wr = sum(1 for t in trades if t > 0) / len(trades)
-        total_ret = max(-0.5, min(1.0, total_ret))
-        return total_ret * 0.30 + max(0, sharpe) / 3 * 0.20 + (1 - mdd) * 0.20 + wr * 0.20 + min(1, len(trades) / 15) * 0.10
+        return backtest_core.fitness_score(result.trades, result.final_capital)
 
     def _save_results(self):
         """保存多维度进化结果"""
