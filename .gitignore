@@ -22,6 +22,11 @@ dist/
 data/*.csv
 search_results/
 
+# 运行时数据（代码执行产生，非契约文件；memory/nexus/*.json 契约除外）
+vigilant-couscous/memory/agi/
+vigilant-couscous/strategy/memory/
+# 注：strategy/memory/ 是 learning_engine ROOT 路径 bug 的产物（P3 修复后此行可移除）
+
 # 构建
 release/
 deploy_package/

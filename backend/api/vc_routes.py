@@ -11,6 +11,9 @@ from pathlib import Path
 from fastapi import APIRouter, Query
 from typing import Optional
 
+from backend.api.models import VcBacktestRequest
+from backend.core.frame_utils import candles_to_frame
+
 router = APIRouter(prefix='/api/vc', tags=['vigilant-couscous'])
 logger = logging.getLogger('QuantTrading.vc')
 
@@ -38,11 +41,11 @@ async def agi_status():
 
 @router.post('/agi/evolve')
 async def agi_evolve(body: dict):
-    """触发一次 AGI 进化周期"""
+    """触发一次 AGI 进化周期（eternal_cycle：目标生成→进化→突变→跨域迁移→自评→巩固）"""
     try:
         from agi.eternal_evolver import EternalEvolver
         evolver = EternalEvolver()
-        result = evolver.evolve() if hasattr(evolver, 'evolve') else {'status': 'no_evolve_method'}
+        result = evolver.eternal_cycle()
         return {'code': 0, 'data': result}
     except Exception as e:
         logger.error(f'AGI evolve failed: {e}')
@@ -51,11 +54,11 @@ async def agi_evolve(body: dict):
 
 @router.get('/agi/learning-report')
 async def agi_learning_report():
-    """获取持续学习报告"""
+    """获取持续学习报告（ContinuousLearner.get_status：训练步数/损失/知识库规模）"""
     try:
         from agi.continuous_learner import ContinuousLearner
         learner = ContinuousLearner()
-        report = learner.get_report() if hasattr(learner, 'get_report') else {'status': 'no_report_method'}
+        report = learner.get_status()
         return {'code': 0, 'data': report}
     except Exception as e:
         logger.warning(f'AGI learning report failed: {e}')
@@ -92,15 +95,14 @@ async def list_strategies():
 
 
 @router.post('/backtest/vc')
-async def run_vc_backtest(body: dict):
+async def run_vc_backtest(body: VcBacktestRequest):
     """使用 vc 回测验证器运行策略回测
-    :body: { inst_id, bar, params, limit }
+    :body: { inst_id, bar, params, limit }（见 api/models.py）
     """
-    import pandas as pd
-    inst_id = body.get('inst_id', 'BTC-USDT')
-    bar = body.get('bar', '1D')
-    params = body.get('params', {})
-    limit = body.get('limit', '300')
+    inst_id = body.inst_id
+    bar = body.bar
+    params = body.params
+    limit = body.limit
 
     # 复用主系统 OKX 数据服务获取数据
     from backend.core.okx_data_service import get_data_service
@@ -110,11 +112,7 @@ async def run_vc_backtest(body: dict):
     if not raw:
         return {'code': 1, 'msg': 'No data'}
 
-    cols = ['ts', 'open', 'high', 'low', 'close', 'vol', 'volCcy', 'volCcyQuote', 'confirm']
-    df = pd.DataFrame(raw, columns=cols)
-    for c in ['open', 'high', 'low', 'close', 'vol']:
-        df[c] = pd.to_numeric(df[c], errors='coerce')
-    df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
+    df = candles_to_frame(raw)
 
     try:
         from evolution.backtest_validator import BacktestValidator
@@ -225,16 +223,33 @@ async def get_nexus_file(filename: str):
 
 @router.post('/github/learn')
 async def github_learn(body: dict):
-    """触发 GitHub 策略学习"""
+    """触发 GitHub 策略学习
+    :body: { n_repos?: int, query?: str }
+      - 带 query：按关键词在线搜索 n_repos 个仓库并提取参数
+      - 不带 query：完整学习循环（静态模板 + 四类发现 + 参数入库）
+    """
     try:
         n_repos = body.get('n_repos', 3)
+        query = body.get('query')
         from strategy.learning_engine import LearningEngine
         learner = LearningEngine()
-        knowledge = learner.daily_search_and_learn(n_repos=n_repos)
+        if query:
+            repos = learner.search_repos(query, per_page=n_repos)
+            return {
+                'code': 0,
+                'count': len(repos),
+                'data': repos or []
+            }
+        entry = learner.full_cycle()
+        count = (
+            int(entry.get('static_added', 0))
+            + int(entry.get('params_added', 0))
+            + sum(int(v) for v in entry.get('discovered', {}).values())
+        )
         return {
             'code': 0,
-            'count': len(knowledge) if knowledge else 0,
-            'data': knowledge or []
+            'count': count,
+            'data': entry
         }
     except Exception as e:
         logger.error(f'GitHub learn failed: {e}')
@@ -243,11 +258,11 @@ async def github_learn(body: dict):
 
 @router.get('/github/seeds')
 async def get_github_seeds(n: int = 5):
-    """获取种子参数"""
+    """获取种子参数（get_seed_genes：从策略库提取 n 组供进化引擎使用的种子基因）"""
     try:
         from strategy.learning_engine import LearningEngine
         learner = LearningEngine()
-        seeds = learner.get_seed_params(n=n)
+        seeds = learner.get_seed_genes(n=n)
         return {'code': 0, 'count': len(seeds), 'data': seeds}
     except Exception as e:
         logger.warning(f'GitHub seeds failed: {e}')

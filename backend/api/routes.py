@@ -16,6 +16,8 @@ from backend.core.okx_data_service import get_data_service
 from backend.core.okx_trade_service import get_trade_service
 from backend.indicators.indicator_engine import get_indicator_engine
 from backend.core.backtest_engine import get_backtest_engine
+from backend.core.frame_utils import candles_to_frame
+from backend.api.models import BacktestRequest, IndicatorCalcRequest
 
 router = APIRouter()
 
@@ -163,15 +165,14 @@ async def get_indicator_categories():
 
 
 @router.post('/api/indicators/calculate')
-async def calculate_indicators(body: dict):
+async def calculate_indicators(body: IndicatorCalcRequest):
     """计算指定指标
-    :body: { inst_id, bar, indicators: [name1, name2, ...], limit }
+    :body: { inst_id, bar, indicators: [name1, name2, ...], limit }（见 api/models.py）
     """
-    import pandas as pd
-    inst_id = body.get('inst_id', 'BTC-USDT')
-    bar = body.get('bar', '1H')
-    indicators = body.get('indicators', [])
-    limit = body.get('limit', '300')
+    inst_id = body.inst_id
+    bar = body.bar
+    indicators = body.indicators
+    limit = body.limit
 
     svc = get_data_service()
     raw = svc.get_candlesticks(inst_id, bar, limit)
@@ -179,12 +180,7 @@ async def calculate_indicators(body: dict):
     if not raw:
         return {'code': 1, 'msg': 'No data'}
 
-    # 转为 DataFrame
-    cols = ['ts', 'open', 'high', 'low', 'close', 'vol', 'volCcy', 'volCcyQuote', 'confirm']
-    df = pd.DataFrame(raw, columns=cols)
-    for c in ['open', 'high', 'low', 'close', 'vol']:
-        df[c] = pd.to_numeric(df[c], errors='coerce')
-    df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
+    df = candles_to_frame(raw)
 
     engine = get_indicator_engine()
     df = engine.calculate_multiple(df, indicators)
@@ -197,16 +193,15 @@ async def calculate_indicators(body: dict):
 # ==================== 回测接口 ====================
 
 @router.post('/api/backtest')
-async def run_backtest(body: dict):
+async def run_backtest(body: BacktestRequest):
     """运行策略回测
-    :body: { inst_id, bar, strategy, params, limit }
+    :body: { inst_id, bar, strategy, params, limit }（见 api/models.py）
     """
-    import pandas as pd
-    inst_id = body.get('inst_id', 'BTC-USDT')
-    bar = body.get('bar', '1H')
-    strategy = body.get('strategy', 'ma_cross')
-    params = body.get('params', {})
-    limit = body.get('limit', '300')
+    inst_id = body.inst_id
+    bar = body.bar
+    strategy = body.strategy
+    params = body.params
+    limit = body.limit
 
     svc = get_data_service()
     raw = svc.get_candlesticks(inst_id, bar, limit)
@@ -214,11 +209,7 @@ async def run_backtest(body: dict):
     if not raw:
         return {'code': 1, 'msg': 'No data'}
 
-    cols = ['ts', 'open', 'high', 'low', 'close', 'vol', 'volCcy', 'volCcyQuote', 'confirm']
-    df = pd.DataFrame(raw, columns=cols)
-    for c in ['open', 'high', 'low', 'close', 'vol']:
-        df[c] = pd.to_numeric(df[c], errors='coerce')
-    df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
+    df = candles_to_frame(raw)
 
     engine = get_backtest_engine()
     result = engine.run(df, strategy, params)
