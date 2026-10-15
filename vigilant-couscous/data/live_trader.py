@@ -1,11 +1,11 @@
 """
 实盘交易接口 - 欧易(OKX) API
 
-功能�?
+功能:
 - 实时行情订阅
-- 自动下单（市�?限价�?
-- 持仓查询与管�?
-- 订单状态追�?
+- 自动下单（市价/限价）
+- 持仓查询与管理
+- 订单状态追踪
 - 账户余额查询
 """
 
@@ -15,7 +15,7 @@ import hmac
 import base64
 import hashlib
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 from dataclasses import dataclass
 import requests
 import logging
@@ -49,7 +49,7 @@ class Position:
 class OKXLiveTrader:
     """欧易实盘交易接口
     
-    支持公开行情（无需 API Key）和私有交易（需�?API Key）�?
+    支持公开行情（无需 API Key）和私有交易（需要 API Key）。
     """
     
     def __init__(
@@ -72,7 +72,7 @@ class OKXLiveTrader:
         })
         
         if not demo and (not api_key or not secret_key or not passphrase):
-            logger.warning("实盘模式需要完整的 API 三件套，当前为演示模�?)
+            logger.warning("实盘模式需要完整的 API 三件套，当前为演示模式")
             self.demo = True
     
     def _sign(self, timestamp: str, method: str, path: str, body: str = "") -> str:
@@ -86,7 +86,7 @@ class OKXLiveTrader:
         return base64.b64encode(mac.digest()).decode('utf-8')
     
     def _request(self, method: str, path: str, params: dict = None, body: dict = None) -> dict:
-        """发送签名请�?""
+        """发送签名请求"""
         url = self.base_url + path
         timestamp = str(int(time.time()))
         body_str = json.dumps(body) if body else ""
@@ -124,7 +124,7 @@ class OKXLiveTrader:
         """获取实时行情
         
         Returns:
-            {'last': 价格, 'high24h': 最�? 'low24h': 最�? 'vol24h': 成交�? ...}
+            {'last': 价格, 'high24h': 最高, 'low24h': 最低, 'vol24h': 成交量, ...}
         """
         result = self._request('GET', '/api/v5/market/ticker', params={'instId': symbol})
         if result.get('code') == '0' and result.get('data'):
@@ -143,7 +143,7 @@ class OKXLiveTrader:
         return {}
     
     def get_candles(self, symbol: str = "BTC-USDT", bar: str = "1D", limit: int = 100) -> List[dict]:
-        """获取 K 线数�?""
+        """获取 K 线数据"""
         result = self._request('GET', '/api/v5/market/candles', params={
             'instId': symbol, 'bar': bar, 'limit': limit
         })
@@ -162,7 +162,7 @@ class OKXLiveTrader:
         return []
     
     def get_orderbook(self, symbol: str = "BTC-USDT", depth: int = 5) -> dict:
-        """获取订单�?""
+        """获取订单簿"""
         result = self._request('GET', '/api/v5/market/books', params={
             'instId': symbol, 'sz': depth
         })
@@ -175,7 +175,7 @@ class OKXLiveTrader:
             }
         return {}
     
-    # ===== 私有交易接口（需�?API Key�?====
+    # ===== 私有交易接口（需要 API Key）====
     
     def get_balance(self) -> dict:
         """获取账户余额"""
@@ -225,9 +225,9 @@ class OKXLiveTrader:
         """下单
         
         Args:
-            symbol: 交易对，�?BTC-USDT
+            symbol: 交易对，如 BTC-USDT
             side: buy / sell
-            quantity: 数量（市价买入时�?USDT 金额�?
+            quantity: 数量（市价买入时为 USDT 金额）
             price: 限价单价格（市价单不需要）
             order_type: market / limit
         """
@@ -252,8 +252,8 @@ class OKXLiveTrader:
         
         if order_type == 'market':
             if side == 'buy':
-                # OKX 现货市价买入 sz �?USDT 金额，非币数�?
-                # �?quantity 为币数量，需乘以当前价格转换为金�?
+                # OKX 现货市价买入 sz 为 USDT 金额，非币数量
+                # 若 quantity 为币数量，需乘以当前价格转换为金额
                 buy_amount = quantity * price if price else quantity
                 body['sz'] = str(buy_amount)
             else:
@@ -290,7 +290,7 @@ class OKXLiveTrader:
         return result.get('code') == '0'
     
     def get_order_status(self, order_id: str, symbol: str) -> dict:
-        """查询订单状�?""
+        """查询订单状态"""
         if self.demo:
             return {'order_id': order_id, 'status': 'filled'}
         
