@@ -41,7 +41,7 @@ jobs:
         # 依赖统一在 requirements-gov.txt 声明（不再散落在工作流里随云波动）。
         # 采集器对缺失工具自动降级为 skipped 并计入 report.summary，
         # 因此安装失败不阻塞其余 6 个度量——但 skipped 数会在摘要里可见。
-        run: pip install -r requirements-gov.txt || echo 'WARN: gov toolchain unavailable, metrics will be skipped'
+        run: pip install -r requirements-gov.txt || echo "WARN - gov toolchain unavailable, metrics will be skipped"
 
       - name: Collect metrics
         env:
