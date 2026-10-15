@@ -8,7 +8,7 @@
 - ccxt: 加密货币交易所
 """
 
-from typing import Dict, List, Optional, Union
+from typing import Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 import pandas as pd
