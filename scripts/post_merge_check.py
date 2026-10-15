@@ -60,7 +60,36 @@ def extract_version(ver_str):
     match = re.match(r'^[><=!~]+(.+)', ver_str)
     return match.group(1) if match else ver_str
 
-# 检查冲突（只比较纯版本号，忽略前缀格式差异）
+
+def _parse_ver(v):
+    """把版本号解析为可比较的整数元组，忽略预发布后缀"""
+    parts = []
+    for p in re.split(r'[.]', v.strip()):
+        m = re.match(r'^(\d+)', p)
+        parts.append(int(m.group(1)) if m else 0)
+    return tuple(parts)
+
+
+def satisfies(pin, spec):
+    """检查精确 pin（如 2.3.3）是否满足 spec（如 >=2.3.3,<3.0 / ==1.2.3）"""
+    pv = _parse_ver(pin)
+    for clause in spec.split(','):
+        clause = clause.strip()
+        if not clause:
+            continue
+        m = re.match(r'^(>=|<=|==|!=|>|<)\s*(.+)$', clause)
+        if not m:
+            return False
+        op, ver = m.group(1), _parse_ver(m.group(2))
+        if op == '>=' and not pv >= ver: return False
+        if op == '<=' and not pv <= ver: return False
+        if op == '>' and not pv > ver: return False
+        if op == '<' and not pv < ver: return False
+        if op == '==' and not pv == ver: return False
+        if op == '!=' and not pv != ver: return False
+    return True
+
+# 检查冲突（vc 精确 pin 落在主系统版本范围内视为兼容，不算冲突）
 conflicts = []
 overlaps = []
 for name, main_ver in main_deps.items():
@@ -68,6 +97,8 @@ for name, main_ver in main_deps.items():
         vc_ver = vc_deps[name]
         overlaps.append(name)
         if main_ver and vc_ver:
+            if vc_ver.startswith('==') and satisfies(vc_ver[2:].strip(), main_ver):
+                continue
             main_ver_pure = extract_version(main_ver)
             vc_ver_pure = extract_version(vc_ver)
             if main_ver_pure != vc_ver_pure:
