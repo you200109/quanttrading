@@ -1,0 +1,100 @@
+# 治理系统配置（自我演进闭环的唯一参数来源）
+#
+# 设计原则：
+# 1. 所有阈值/关键词/权重必须写在这里，不得硬编码进 discover/score/monitor 脚本；
+# 2. 缺少必需字段时 gov/config.py 会带字段名报错退出——不做"静默取默认值"，
+#    那正是本仓库一路清理的失效模式；
+# 3. 本文件随仓库版本化，改配置即改代码，享有同一套 CI 门禁。
+
+schema_version: 1
+
+# ① 发现：GitHub Search API 的检索面
+discovery:
+  per_keyword_limit: 10          # 每个关键词取回的仓库上限
+  max_requests_per_run: 24       # 单次运行的 Search API 调用上限（配额保护）
+  domains:
+    quant:
+      enabled: true
+      keywords:
+        - quantitative trading framework
+        - algorithmic trading python
+        - backtesting engine
+        - orderbook market data
+        - factor investing library
+      topics:
+        - quantitative-finance
+        - algorithmic-trading
+        - backtesting
+    ai_agent:
+      enabled: true
+      keywords:
+        - llm agent orchestration
+        - autonomous agent framework
+        - agent memory system
+        - tool calling agent
+      topics:
+        - llm-agent
+        - autonomous-agents
+    eng_infra:
+      enabled: true
+      keywords:
+        - observability python
+        - resilience circuit breaker
+        - workflow orchestration python
+      topics:
+        - observability
+        - resilience
+  filters:
+    min_stars: 200               # 下限过低会被玩具项目淹没
+    pushed_within_days: 365      # 超过一年无提交视为停止维护
+    exclude_forks: true
+    exclude_archived: true
+
+# ② 筛选：7 维打分 + 分层 + 黑白名单
+scoring:
+  weights:                       # 权重之和无需为 100，内部按 sum 归一
+    star_trend: 20
+    commit_freshness: 20
+    issue_response: 15
+    dependency_health: 15
+    license: 10
+    language_fit: 10
+    maintenance: 10
+  tiers:
+    A: 75                        # ≥75 -> A（进入监控 + 学习）
+    B: 55                        # 55~75 -> B（进监控，待人工放行再学习）
+    C: 0                         # <55 -> C（只留档）
+  whitelist:                     # 免评分直接进 shortlist（人工已认可的观察对象）
+    []
+  blacklist:                     # 永不考虑（含明确的噪声源/自身镜像/已废弃项目）
+    - 'you200109/quanttrading'   # 自己
+
+# ③ 监控：外部项目 release 跟踪 + 自身依赖健康 + 配额
+monitoring:
+  watched:                       # 已在用或计划采用的上游项目
+    - repo: 'freqtrade/freqtrade'
+      kind: release
+    - repo: 'ranaroussi/quantstats'
+      kind: release
+    - repo: 'peng-repeat/okx-python-sdk-api'
+      kind: release
+  self_requirements:
+    - requirements.txt
+    - requirements-gov.txt
+  alerts:
+    max_open_alerts: 5           # 告警洪水保护：超过则只追加到已有 Issue
+    ci_success_floor: 0.9        # CI 成功率下限
+    coverage_floor: 40           # 与 ci.yml 的 --cov-fail-under 对齐
+
+# ⑤ 学习：只读分析，绝不执行候选代码
+analysis:
+  clone_depth: 1
+  max_files_scanned: 400
+  include_extensions:
+    - '.py'
+  never_execute: true            # 明确的安全边界标记（analyze.py 启动时复核）
+
+# 知识库：项目的长期记忆，随仓库版本化
+knowledge:
+  root: 'vigilant-couscous/memory/knowledge'
+  decisions_file: 'decisions.jsonl'

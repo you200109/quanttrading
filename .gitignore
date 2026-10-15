@@ -36,3 +36,8 @@ node_modules/
 # 测试覆盖率产物
 .coverage
 coverage.xml
+
+# 治理系统运行产物（scripts/gov/* 的输出，CI 上以 artifact 留存 90 天）
+# 注：P5d 曾在 metrics.py 注释里写"reports/ 已被 .gitignore 忽略"，当时并没有这一行——
+# 本地跑一次采集就会多出一堆未跟踪文件。现将承诺补实。
+reports/
