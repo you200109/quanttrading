@@ -39,7 +39,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
 ### 国内服务器
 ```
-OKX_API_HOST=www.oyigwcn.systems
+OKX_API_HOST=www.okx.com
 ```
 
 ### 国际服务器

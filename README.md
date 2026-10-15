@@ -33,7 +33,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 |------|------|
 | 后端 | Python 3.12 + FastAPI + Uvicorn |
 | 前端 | HTML + CSS + JS + lightweight-charts |
-| 数据源 | OKX API (www.oyigwcn.systems) |
+| 数据源 | OKX API (www.okx.com) |
 | 指标库 | pandas-ta (508 个指标) |
 | CI/CD | GitHub Actions (65 个工作流) |
 
@@ -52,7 +52,7 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 | OKX_SECRET_KEY | OKX Secret Key | - |
 | OKX_PASSPHRASE | OKX Passphrase | - |
 | OKX_SIMULATED | 模拟盘(1)/实盘(0) | 1 |
-| OKX_API_HOST | API域名 | www.oyigwcn.systems |
+| OKX_API_HOST | API域名 | www.okx.com |
 | OKX_PROXY | 代理地址 | - |
 
 ## 📄 License

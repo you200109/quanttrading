@@ -22,9 +22,9 @@
 └─────────────────────┬───────────────────────────┘
                       │
 ┌─────────────────────┴───────────────────────────┐
-│           OKX 交易所 (www.oyigwcn.systems)        │
+│           OKX 交易所 (www.okx.com)              │
 │  REST API: /api/v5/market/*                       │
-│  WebSocket: wss://ws.oyigwcn.systems:8443/ws/v5/* │
+│  WebSocket: wss://ws.okx.com:8443/ws/v5/*       │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -34,7 +34,7 @@
 |------|------|------|
 | 前端 | HTML + CSS + JS + lightweight-charts | 暗色主题，专业K线图表 |
 | 后端 | Python 3.12 + FastAPI + Uvicorn | 异步API，自动文档 |
-| 数据源 | OKX API (oyigwcn.systems) | 国内可用网关，无需代理 |
+| 数据源 | OKX API (www.okx.com) | 官方域名；如需镜像网关请经 OKX_API_HOST 覆盖并自行核实域名安全 |
 | 指标库 | pandas-ta 0.4.71b0 | 508个技术指标 |
 | 交易所SDK | okx 2.1.2 | 官方Python SDK |
 | CI/CD | GitHub Actions | 65个自动化工作流 |

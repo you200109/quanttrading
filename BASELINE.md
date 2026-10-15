@@ -44,7 +44,7 @@
 - TODO/FIXME：0
 
 ## OKX 连通性
-- API 网关：www.oyigwcn.systems
+- API 网关：www.okx.com
 - K 线数据：实时返回
 - 盘口数据：实时返回
 - WebSocket：已配置（含重连）
