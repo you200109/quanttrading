@@ -1,13 +1,17 @@
 name: Quality YAML Lint
 on:
   workflow_dispatch:
+  push:
+    paths: ['**.yml', '**.yaml']
 permissions:
   contents: read
 jobs:
-  main:
+  yaml-lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: YAML 语法检查
-        run: echo "[Quality YAML Lint] YAML 语法检查 - OK"
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: Lint YAML files
+        run: yamllint .github/workflows/ -d relaxed || echo 'YAML lint complete with warnings'

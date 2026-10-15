@@ -1,15 +1,21 @@
 name: Security CodeQL
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 19 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
 permissions:
   contents: read
+  security-events: write
 jobs:
-  main:
+  codeql:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: CodeQL 代码安全扫描
-        run: echo "[Security CodeQL] CodeQL 代码安全扫描 - OK"
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: python
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3

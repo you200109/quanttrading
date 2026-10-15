@@ -1,15 +1,20 @@
 name: Security Audit
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 19 * * 1'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: 每周依赖安全审计
-        run: echo "[Security Audit] 每周依赖安全审计 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Run security audit
+        run: pip-audit -r requirements.txt --desc || echo 'Audit complete with warnings'

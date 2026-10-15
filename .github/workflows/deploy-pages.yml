@@ -1,0 +1,91 @@
+name: Deploy Backtest Report
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    name: Generate Backtest Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run backtest and generate report
+        run: |
+          import sys
+          sys.path.insert(0, '.')
+          from backend.core.okx_data_service import get_data_service
+          from backend.core.backtest_engine import get_backtest_engine
+          import pandas as pd
+          from datetime import datetime
+          
+          svc = get_data_service()
+          raw = svc.get_candlesticks('BTC-USDT', '1H', '300')
+          result = {'total_return_pct': 'N/A', 'buy_hold_return_pct': 'N/A', 'max_drawdown_pct': 'N/A', 'sharpe_ratio': 'N/A', 'total_trades': 'N/A', 'win_rate': 'N/A', 'strategy': 'ma_cross', 'initial_capital': 'N/A', 'final_capital': 'N/A'}
+          if raw:
+              cols = ['ts', 'open', 'high', 'low', 'close', 'vol', 'volCcy', 'volCcyQuote', 'confirm']
+              df = pd.DataFrame(raw, columns=cols)
+              for c in ['open', 'high', 'low', 'close', 'vol']:
+                  df[c] = pd.to_numeric(df[c], errors='coerce')
+              df['ts'] = pd.to_datetime(df['ts'].astype(float), unit='ms')
+              engine = get_backtest_engine()
+              result = engine.run(df, 'ma_cross', {'fast': 5, 'slow': 20})
+          
+          TEMPLATE = '''<!DOCTYPE html>
+          <html><head><meta charset='UTF-8'><title>QuantTrading Backtest Report</title>
+          <style>
+          body { font-family: sans-serif; margin: 40px; background: rgb(13,17,23); color: rgb(230,237,243); }
+          .card { background: rgb(22,27,34); border: 1px solid rgb(48,54,61); border-radius: 8px; padding: 20px; margin: 10px 0; }
+          .metric { display: inline-block; margin: 10px 20px; }
+          .value { font-size: 28px; font-weight: bold; color: rgb(88,166,255); }
+          .label { font-size: 12px; color: rgb(139,148,158); }
+          </style></head><body>
+          <h1>QuantTrading Backtest Report</h1>
+          <p>Generated: __TIMESTAMP__</p>
+          <div class='card'>
+          <div class='metric'><div class='value'>__RETURN__%</div><div class='label'>Total Return</div></div>
+          <div class='metric'><div class='value'>__BH__%</div><div class='label'>Buy &amp; Hold</div></div>
+          <div class='metric'><div class='value'>__DD__%</div><div class='label'>Max Drawdown</div></div>
+          <div class='metric'><div class='value'>__SHARPE__</div><div class='label'>Sharpe</div></div>
+          <div class='metric'><div class='value'>__TRADES__</div><div class='label'>Trades</div></div>
+          <div class='metric'><div class='value'>__WIN__%</div><div class='label'>Win Rate</div></div>
+          </div>
+          <div class='card'><h3>Strategy: __STRATEGY__</h3>
+          <p>Capital: __INITIAL__ to __FINAL__</p></div>
+          </body></html>'''
+          
+          html = (TEMPLATE
+              .replace('__TIMESTAMP__', datetime.now().strftime('%Y-%m-%d %H:%M UTC'))
+              .replace('__RETURN__', str(result.get('total_return_pct', 'N/A')))
+              .replace('__BH__', str(result.get('buy_hold_return_pct', 'N/A')))
+              .replace('__DD__', str(result.get('max_drawdown_pct', 'N/A')))
+              .replace('__SHARPE__', str(result.get('sharpe_ratio', 'N/A')))
+              .replace('__TRADES__', str(result.get('total_trades', 'N/A')))
+              .replace('__WIN__', str(result.get('win_rate', 'N/A')))
+              .replace('__STRATEGY__', str(result.get('strategy', 'N/A')))
+              .replace('__INITIAL__', str(result.get('initial_capital', 'N/A')))
+              .replace('__FINAL__', str(result.get('final_capital', 'N/A')))
+          )
+          
+          with open('backtest-report.html', 'w', encoding='utf-8') as f:
+              f.write(html)
+          print('Backtest report generated')
+          
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-report
+          path: backtest-report.html

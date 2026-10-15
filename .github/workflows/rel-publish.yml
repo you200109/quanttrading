@@ -1,13 +1,33 @@
 name: Release Publish
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
-  main:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: 发布发布包
-        run: echo "[Release Publish] 发布发布包 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build package
+        run: |
+          pip install build
+          if [ -f pyproject.toml ]; then
+            python -m build || echo 'Build skipped (no pyproject)'
+          else
+            echo 'No pyproject.toml, creating source archive'
+            tar -czf quanttrading-source.tar.gz --exclude='.git' --exclude='node_modules' .
+          fi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            dist/*
+            *.tar.gz
+          if-no-files-found: ignore

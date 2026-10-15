@@ -4,10 +4,16 @@ on:
 permissions:
   contents: read
 jobs:
-  main:
+  license:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 许可证合规检查
-        run: echo "[Security License Check] 许可证合规检查 - OK"
+      - name: Check licenses
+        run: |
+          if [ -f LICENSE ]; then
+            echo '✅ LICENSE file exists'
+            head -3 LICENSE
+          else
+            echo '⚠️ No LICENSE file found'
+          fi

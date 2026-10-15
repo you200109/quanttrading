@@ -1,15 +1,19 @@
 name: Monitor Workflows
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 3 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  workflows:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: 工作流运行状态监控
-        run: echo "[Monitor Workflows] 工作流运行状态监控 - OK"
+      - name: Check workflow status
+        run: |
+          WFS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}"             "https://api.github.com/repos/${{ github.repository }}/actions/workflows?per_page=100")
+          TOTAL=$(echo $WFS | python3 -c 'import json,sys; print(len(json.load(sys.stdin).get("workflows",[])))')
+          ACTIVE=$(echo $WFS | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len([w for w in d.get("workflows",[]) if w.get("state")=="active"]))')
+          echo "Total workflows: $TOTAL"
+          echo "Active workflows: $ACTIVE"

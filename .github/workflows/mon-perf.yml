@@ -1,15 +1,26 @@
 name: Monitor Performance
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 4 * * *'
 permissions:
   contents: read
 jobs:
-  main:
+  perf:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 性能指标监控
-        run: echo "[Monitor Performance] 性能指标监控 - OK"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Performance benchmark
+        run: |
+          pip install -r requirements.txt -q
+          python -c "
+          import time
+          start = time.time()
+          from backend.indicators.indicator_engine import get_indicator_engine
+          e = get_indicator_engine()
+          init_time = time.time() - start
+          print(f'Indicator engine init: {init_time:.2f}s ({e.get_indicator_count()} indicators)')
+          print(f'Avg per indicator: {init_time/e.get_indicator_count()*1000:.2f}ms')
+          "

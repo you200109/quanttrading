@@ -1,13 +1,19 @@
-name: Security ZipSlip
+name: Security ZipSlip Check
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  main:
+  zipslip:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: 路径穿越防护检查
-        run: echo "[Security ZipSlip] 路径穿越防护检查 - OK"
+      - name: Check for path traversal risks
+        run: |
+          # 检查代码中的路径拼接风险
+          if grep -rE '(open\(.*\+|os\.path\.join\(.*input|Path\(.*\+)' --include='*.py' backend/ 2>/dev/null; then
+            echo '⚠️ Potential path traversal patterns found, review needed'
+          else
+            echo '✅ No obvious path traversal risks'
+          fi

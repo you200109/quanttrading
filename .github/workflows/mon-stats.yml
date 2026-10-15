@@ -1,15 +1,20 @@
 name: Monitor Repo Stats
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 1 * * *'
+  workflow_dispatch:
 permissions:
   contents: read
+  issues: write
 jobs:
-  main:
+  stats:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: 每日仓库统计
-        run: echo "[Monitor Repo Stats] 每日仓库统计 - OK"
+      - name: Get repo stats via API
+        run: |
+          STATS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}"             https://api.github.com/repos/${{ github.repository }})
+          echo "Stars: $(echo $STATS | python3 -c 'import json,sys; print(json.load(sys.stdin)["stargazers_count"])')"
+          echo "Forks: $(echo $STATS | python3 -c 'import json,sys; print(json.load(sys.stdin)["forks_count"])')"
+          echo "Open Issues: $(echo $STATS | python3 -c 'import json,sys; print(json.load(sys.stdin)["open_issues_count"])')"
+          echo "Size: $(echo $STATS | python3 -c 'import json,sys; print(json.load(sys.stdin)["size"])') KB"

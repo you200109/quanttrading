@@ -8,9 +8,11 @@ import os
 import json
 import asyncio
 import threading
+import logging
 import websockets
 import requests
 from dotenv import load_dotenv
+from backend.core.rate_limiter import okx_rate_limiter
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -37,14 +39,15 @@ class OKXDataService:
         self._ws_clients = {}
 
     def _rest_get(self, path, params=None):
-        """带超时和代理的 REST GET 请求"""
+        """带超时、代理和限速的 REST GET 请求"""
+        okx_rate_limiter.acquire()
         url = f'https://{self.api_host}{path}'
         try:
             r = requests.get(url, params=params or {}, timeout=REST_TIMEOUT, proxies=self.proxies)
             if r.status_code == 200:
                 return r.json()
         except Exception as e:
-            print(f'REST GET {path} error: {e}')
+            logging.getLogger('OKXDataService').error(f'REST GET {path} error: {e}')
         return {}
 
     # ==================== REST API ====================
@@ -104,33 +107,51 @@ class OKXDataService:
         await ws.send(json.dumps(sub_msg))
 
     async def start_public_ws(self, inst_id='BTC-USDT', on_data_callback=None):
-        """启动公共 WebSocket 实时数据推送"""
-        url = self.ws_public_url
-        ws = await self._ws_connect(url)
-        self._ws_clients['public'] = ws
+        """启动公共 WebSocket 实时数据推送（含自动重连）"""
+        import asyncio as aio
+        
+        max_retries = 5
+        base_delay = 1
+        
+        for attempt in range(max_retries + 1):
+            try:
+                url = self.ws_public_url
+                ws = await self._ws_connect(url)
+                self._ws_clients['public'] = ws
 
-        channels = [
-            {'channel': 'candle15m', 'instId': inst_id},
-            {'channel': 'candle30m', 'instId': inst_id},
-            {'channel': 'candle1H', 'instId': inst_id},
-            {'channel': 'candle4H', 'instId': inst_id},
-            {'channel': 'books5', 'instId': inst_id},
-            {'channel': 'tickers', 'instId': inst_id},
-        ]
-        await self._ws_subscribe(ws, channels)
+                channels = [
+                    {'channel': 'candle15m', 'instId': inst_id},
+                    {'channel': 'candle30m', 'instId': inst_id},
+                    {'channel': 'candle1H', 'instId': inst_id},
+                    {'channel': 'candle4H', 'instId': inst_id},
+                    {'channel': 'books5', 'instId': inst_id},
+                    {'channel': 'tickers', 'instId': inst_id},
+                ]
+                await self._ws_subscribe(ws, channels)
+                
+                logging.getLogger('OKXDataService').info(f'WebSocket connected (attempt {attempt + 1})')
 
-        try:
-            async for message in ws:
-                data = json.loads(message)
-                if on_data_callback:
-                    if asyncio.iscoroutinefunction(on_data_callback):
-                        await on_data_callback(data)
-                    else:
-                        on_data_callback(data)
-        except websockets.exceptions.ConnectionClosed:
-            pass
-        finally:
-            await ws.close()
+                async for message in ws:
+                    data = json.loads(message)
+                    if on_data_callback:
+                        if asyncio.iscoroutinefunction(on_data_callback):
+                            await on_data_callback(data)
+                        else:
+                            on_data_callback(data)
+                            
+            except websockets.exceptions.ConnectionClosed:
+                logging.getLogger('OKXDataService').warning(f'WebSocket disconnected (attempt {attempt + 1}/{max_retries})')
+            except Exception as e:
+                logging.getLogger('OKXDataService').error(f'WebSocket error: {e}')
+            finally:
+                await self.stop_ws('public')
+            
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logging.getLogger('OKXDataService').info(f'Reconnecting in {delay}s...')
+                await aio.sleep(delay)
+        
+        logging.getLogger('OKXDataService').error('WebSocket max retries reached, giving up')
 
     async def stop_ws(self, client_key='public'):
         """停止 WebSocket 连接"""
