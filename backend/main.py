@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
 from backend.api.routes import router
+from backend.api.vc_routes import router as vc_router
 from backend.core.auth import auth_middleware
 from backend.core.resilience import graceful_shutdown, resource_limiter
 from backend.core.observability import start_trace, end_trace, get_dashboard_data, get_trace_records, get_trace_stats, get_alert_history
@@ -65,6 +66,7 @@ async def trace_middleware(request: Request, call_next):
 
 # 挂载路由
 app.include_router(router)
+app.include_router(vc_router)
 
 # 挂载前端静态文件
 frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend')
