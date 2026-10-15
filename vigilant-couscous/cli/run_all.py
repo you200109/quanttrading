@@ -1,17 +1,17 @@
 """
-自进化交易系�?- 全模块集成入�?
+自进化交易系统 - 全模块集成入口
 
 整合所有升级模块：
 1. GitHub 在线学习 - 真实 API 搜索策略
 2. RL 强化学习训练 - PPO/DQN 交易 Agent
-3. 多币种组合交�?- BTC/ETH/SOL 动态配�?
+3. 多币种组合交易 - BTC/ETH/SOL 动态配置
 4. 实盘交易接口 - 欧易 API 自动下单
-5. 遗传算法进化 - 400 轮迭代优�?
-6. 可视化报�?- 交互�?HTML 图表
+5. 遗传算法进化 - 400 轮迭代优化
+6. 可视化报告 - 交互式 HTML 图表
 
-用法�?
+用法:
     python run_all.py              # 完整流程
-    python run_all.py --rl         # �?RL 训练
+    python run_all.py --rl         # 仅 RL 训练
     python run_all.py --live       # 实盘监控
     python run_all.py --learn      # GitHub 学习
 """
@@ -45,7 +45,7 @@ def step_github_learn():
 
     learner = LearningEngine()
 
-    # 搜索和学�?
+    # 搜索和学习
     print('正在搜索 GitHub 量化交易策略...')
     knowledge = learner.daily_search_and_learn(n_repos=3)
 
@@ -56,16 +56,16 @@ def step_github_learn():
             print(f'  📚 {k["full_name"]} (⭐{k["stars"]})')
             print(f'     {k["description"][:80]}...')
             if params_count > 0:
-                print(f'     提取�?{params_count} 组策略参�?)
+                print(f'     提取了 {params_count} 组策略参数')
     else:
         print('今日已学习或搜索无新结果')
 
     # 获取种子参数
     seeds = learner.get_seed_params(n=5)
-    print(f'\n提取 {len(seeds)} 组种子参数用于进�?)
+    print(f'\n提取 {len(seeds)} 组种子参数用于进化')
 
     report = learner.get_status()
-    print(f'累计学习: {report.get("total_repos_learned", 0)} 个仓�? {report.get("total_params_extracted", 0)} 组参�?)
+    print(f'累计学习: {report.get("total_repos_learned", 0)} 个仓库, {report.get("total_params_extracted", 0)} 组参数')
 
     return learner, seeds
 
@@ -88,7 +88,7 @@ def step_rl_train(data: pd.DataFrame):
 
     trainer = RLTrainer(algorithm="PPO")
 
-    print(f'训练数据: {len(data)} �?)
+    print(f'训练数据: {len(data)} 条')
     print('算法: PPO, 步数: 50000')
 
     result = trainer.train(
@@ -100,10 +100,10 @@ def step_rl_train(data: pd.DataFrame):
 
     if 'error' not in result:
         eval_result = result.get('evaluation', {})
-        print('\n训练完成�?)
-        print(f'  耗时: {result["training_time"]:.1f} �?)
+        print('\n训练完成!')
+        print(f'  耗时: {result["training_time"]:.1f} 秒')
         print(f'  平均收益: {eval_result.get("avg_return", 0):.2%}')
-        print(f'  最大收�? {eval_result.get("max_return", 0):.2%}')
+        print(f'  最大收益: {eval_result.get("max_return", 0):.2%}')
         print(f'  平均胜率: {eval_result.get("avg_win_rate", 0):.1%}')
     else:
         print(f'训练失败: {result["error"]}')
@@ -112,9 +112,9 @@ def step_rl_train(data: pd.DataFrame):
 
 
 def step_portfolio_test():
-    """Step 3: 多币种组合测�?""
+    """Step 3: 多币种组合测试"""
     print('\n' + '=' * 60)
-    print('  [3/5] 多币种组合交易测�?)
+    print('  [3/5] 多币种组合交易测试')
     print('=' * 60)
 
     from data.fetcher import DataFetcher
@@ -127,7 +127,7 @@ def step_portfolio_test():
 
     fetcher = DataFetcher(okx_url='https://www.www.okx.com')
 
-    # 获取多币种价�?
+    # 获取多币种价格
     prices = {}
     for symbol in pm.symbols:
         try:
@@ -150,14 +150,14 @@ def step_portfolio_test():
         for s, w in targets.items():
             print(f'  {s}: {w:.1%}')
 
-        # 生成再平衡订�?
+        # 生成再平衡订单
         orders = pm.generate_rebalance_orders(prices, targets)
         if orders:
-            print(f'\n再平衡订�?({len(orders)} �?:')
+            print(f'\n再平衡订单 ({len(orders)} 笔):')
             for o in orders:
                 print(f'  {o["side"]} {o["quantity"]:.4f} {o["symbol"]} @ ${o["price"]:,.2f}')
         else:
-            print('无需再平�?)
+            print('无需再平衡')
 
     return pm
 
@@ -180,12 +180,12 @@ def step_live_trader_test():
     ticker = trader.get_ticker('BTC-USDT')
     if ticker:
         print(f'  最新价: ${ticker["last"]:,.2f}')
-        print(f'  24h最�? ${ticker["high24h"]:,.2f}')
-        print(f'  24h最�? ${ticker["low24h"]:,.2f}')
-        print(f'  24h成交�? {ticker["vol24h"]:,.2f}')
+        print(f'  24h最高: ${ticker["high24h"]:,.2f}')
+        print(f'  24h最低: ${ticker["low24h"]:,.2f}')
+        print(f'  24h成交量: {ticker["vol24h"]:,.2f}')
 
-    # 获取 K �?
-    print('\n获取�?5 天日�?..')
+    # 获取 K 线
+    print('\n获取近 5 天日线...')
     candles = trader.get_candles('BTC-USDT', '1D', 5)
     for c in candles:
         ts = datetime.fromtimestamp(c['timestamp'] / 1000)
@@ -198,7 +198,7 @@ def step_live_trader_test():
         print(f'  订单ID: {order.order_id}')
         print(f'  方向: {order.side}')
         print(f'  数量: {order.quantity}')
-        print(f'  状�? {order.status}')
+        print(f'  状态: {order.status}')
 
     return trader
 
@@ -211,25 +211,25 @@ def step_generate_report(results: dict):
 
     report = f"""
 {'='*60}
-  自进化交易系�?- 全模块运行报�?
+  自进化交易系统 - 全模块运行报告
   时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 {'='*60}
 
 📚 GitHub 在线学习:
   累计仓库: {results.get('gh_repos', 0)}
-  提取参数: {results.get('gh_params', 0)} �?
+  提取参数: {results.get('gh_params', 0)} 个
 
 🧠 RL 强化学习:
   算法: PPO
   训练步数: 50,000
   平均收益: {results.get('rl_return', 0):.2%}
 
-📊 多币种组�?
+📊 多币种组合:
   监控币种: BTC, ETH, SOL
-  再平衡订�? {results.get('rebalance_orders', 0)} �?
+  再平衡订单: {results.get('rebalance_orders', 0)} 笔
 
 💹 实盘接口:
-  状�? {'正常' if results.get('live_ok') else '演示模式'}
+  状态: {'正常' if results.get('live_ok') else '演示模式'}
   BTC 价格: ${results.get('btc_price', 0):,.2f}
 
 {'='*60}
@@ -243,12 +243,12 @@ def step_generate_report(results: dict):
     report_file = report_dir / f'all_modules_report_{datetime.now().strftime("%Y%m%d_%H%M")}.txt'
     with open(report_file, 'w', encoding='utf-8') as f:
         f.write(report)
-    print(f'报告已保�? {report_file}')
+    print(f'报告已保存: {report_file}')
 
 
 def main():
-    parser = argparse.ArgumentParser(description='自进化交易系�?- 全模块集�?)
-    parser.add_argument('--rl', action='store_true', help='�?RL 训练')
+    parser = argparse.ArgumentParser(description='自进化交易系统 - 全模块集成')
+    parser.add_argument('--rl', action='store_true', help='仅 RL 训练')
     parser.add_argument('--live', action='store_true', help='实盘监控')
     parser.add_argument('--learn', action='store_true', help='GitHub 学习')
     args = parser.parse_args()
@@ -263,8 +263,8 @@ def main():
     }
 
     print('=' * 60)
-    print('  自进化交易系�?v2.0 - 全模块集�?)
-    print('  GitHub学习 | RL训练 | 多币�?| 实盘')
+    print('  自进化交易系统 v2.0 - 全模块集成')
+    print('  GitHub学习 | RL训练 | 多币种 | 实盘')
     print('=' * 60)
 
     # 获取 BTC 数据（RL 训练和组合测试共用）
@@ -276,7 +276,7 @@ def main():
     print('\n获取 BTC/USDT 数据...')
     btc_data = fetcher.fetch('BTC/USDT', start_date=start_date, end_date=end_date, source='ccxt')
     if not btc_data.empty:
-        print(f'获取成功: {len(btc_data)} �?)
+        print(f'获取成功: {len(btc_data)} 条')
         results['btc_price'] = btc_data['close'].iloc[-1]
 
     if args.learn:
@@ -310,7 +310,7 @@ def main():
             except Exception as e:
                 print(f'RL 训练跳过: {e}')
 
-        # 3. 多币种组�?
+        # 3. 多币种组合
         try:
             step_portfolio_test()
         except Exception as e:
@@ -326,7 +326,7 @@ def main():
         # 5. 综合报告
         step_generate_report(results)
 
-    print('\n�?全模块集成运行完成！')
+    print('\n✅ 全模块集成运行完成！')
 
 
 if __name__ == '__main__':
