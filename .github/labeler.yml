@@ -1,0 +1,46 @@
+# P5c（2026-10-16）：auto-label.yml 的 actions/labeler@v5 配置
+#
+# 背景：此前 .github/labeler.yml 不存在，labeler 步骤因 continue-on-error
+# 静默失效，实际只有 Fallback labeling 的标题关键词打标（bug/enhancement/
+# documentation）在起作用，路径维度的标签从未生效。
+#
+# 约束：
+# 1. actions/labeler 只对 pull_request 有效，issues 事件仍走 auto-label.yml
+#    的 Fallback labeling（按标题打标），职责不冲突
+# 2. 本表只引用仓库已存在的标签（GitHub 上没有的标签会被 labeler 忽略）
+# 3. 命中多个规则会同时打多个标签（例如同时改 vigilant-couscous 代码和
+#    它的 requirements.txt → vc + dependencies），这是预期行为
+
+version: 5
+
+labels:
+  - label: "python"
+    files:
+      - "backend/**"
+      - "tests/**"
+      - "scripts/**"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - ".flake8"
+
+  - label: "vc"
+    files:
+      - "vigilant-couscous/**"
+
+  - label: "ci"
+    files:
+      - ".github/workflows/**"
+      - ".github/dependabot.yml"
+
+  - label: "documentation"
+    files:
+      - "docs/**"
+      - "README.md"
+      - "BASELINE.md"
+      - "CONTRIBUTING.md"
+
+  - label: "dependencies"
+    files:
+      - "requirements.txt"
+      - "vigilant-couscous/requirements.txt"
+      - ".github/dependabot.yml"

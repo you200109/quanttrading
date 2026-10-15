@@ -28,9 +28,11 @@ on:
 env:
   PYTHON_VERSION: '3.12'
 
-# 需要创建 GitHub Release
+# P5b（2026-10-16）：去自动发布——不再在每次 push 时创建 GitHub Release，
+# 版本发布统一走 rel-tag.yml 手动打 tag -> rel-publish.yml 构建产物。
+# 构建/部署产物仍以 artifact 形式上传，deploy.sh 照常可用。
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # ==================== 测试 ====================
@@ -92,16 +94,6 @@ jobs:
         with:
           name: quanttrading-${{ steps.version.outputs.version }}
           path: release/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          files: release/*.tar.gz
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output version
         id: output_version
