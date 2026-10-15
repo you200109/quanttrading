@@ -1,0 +1,18 @@
+# Code owners for quanttrading
+# Default owner
+* @you200109
+
+# Backend
+/backend/ @you200109
+
+# Frontend
+/frontend/ @you200109
+
+# Workflows
+/.github/workflows/ @you200109
+
+# Documentation
+/docs/ @you200109
+
+# Scripts
+/scripts/ @you200109
