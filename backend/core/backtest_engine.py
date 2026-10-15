@@ -3,11 +3,13 @@
 - 支持多种策略：均线交叉、RSI超卖、布林带突破、MACD背离
 - 基于历史K线数据进行事件驱动回测
 - 输出收益统计、交易记录、绩效指标
+- 含风控：止损、最大仓位、最大回撤限制
 """
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
 import logging
+import threading
 from typing import Dict, List, Optional
 
 logger = logging.getLogger('BacktestEngine')
@@ -16,10 +18,14 @@ logger = logging.getLogger('BacktestEngine')
 class BacktestEngine:
     """策略回测引擎"""
 
-    def __init__(self, initial_capital=100000, commission_rate=0.001, slippage=0.0001):
+    def __init__(self, initial_capital=100000, commission_rate=0.001, slippage=0.0001,
+                 stop_loss_pct=5.0, max_position_pct=0.95, max_drawdown_pct=20.0):
         self.initial_capital = initial_capital
         self.commission_rate = commission_rate
         self.slippage = slippage
+        self.stop_loss_pct = stop_loss_pct
+        self.max_position_pct = max_position_pct
+        self.max_drawdown_pct = max_drawdown_pct
 
     def run(self, df: pd.DataFrame, strategy: str, params: Dict) -> Dict:
         """运行回测
@@ -30,8 +36,8 @@ class BacktestEngine:
         """
         logger.info(f'Running backtest: {strategy} with params {params}')
 
-        # 生成信号
-        signals = self._generate_signals(df, strategy, params)
+        # 生成信号（使用副本避免污染原始数据）
+        signals = self._generate_signals(df.copy(), strategy, params)
         if signals is None:
             return {'code': 1, 'msg': f'Unknown strategy: {strategy}'}
 
@@ -53,7 +59,6 @@ class BacktestEngine:
             df['signal'] = 0
             df.loc[df['ma_fast'] > df['ma_slow'], 'signal'] = 1
             df.loc[df['ma_fast'] < df['ma_slow'], 'signal'] = -1
-            # 只在交叉时产生信号
             df['prev_signal'] = df['signal'].shift(1).fillna(0)
             signals = df['signal'].where(df['signal'] != df['prev_signal'], 0)
             return signals
@@ -97,23 +102,73 @@ class BacktestEngine:
         return None
 
     def _simulate_trades(self, df: pd.DataFrame, signals: pd.Series) -> Dict:
-        """模拟交易，计算收益"""
+        """模拟交易，计算收益（含风控）"""
         capital = self.initial_capital
         position = 0
         entry_price = 0
         trades = []
         equity_curve = []
+        peak_equity = self.initial_capital
+        risk_stopped = False
 
         for i in range(len(df)):
             signal = signals.iloc[i] if i < len(signals) else 0
             close_price = df['close'].iloc[i]
             timestamp = df['ts'].iloc[i] if 'ts' in df.columns else i
 
-            # 买入信号
-            if signal == 1 and position == 0:
+            # 风控检查：最大回撤限制
+            current_equity = capital + position * close_price
+            if current_equity > peak_equity:
+                peak_equity = current_equity
+            drawdown = (peak_equity - current_equity) / peak_equity * 100
+            if drawdown > self.max_drawdown_pct:
+                if position > 0:
+                    exit_price = close_price * (1 - self.slippage)
+                    proceeds = position * exit_price
+                    commission = proceeds * self.commission_rate
+                    capital += proceeds - commission
+                    trades.append({
+                        'time': str(timestamp),
+                        'side': 'sell',
+                        'price': round(exit_price, 2),
+                        'shares': round(position, 6),
+                        'commission': round(commission, 2),
+                        'pnl_pct': round((exit_price - entry_price) / entry_price * 100, 2),
+                        'reason': 'max_drawdown_stop',
+                    })
+                    position = 0
+                risk_stopped = True
+                logger.warning(f'Max drawdown {drawdown:.1f}% exceeded limit {self.max_drawdown_pct}%, stopping')
+                break
+
+            # 风控检查：止损触发
+            if position > 0 and entry_price > 0:
+                pnl_pct = (close_price - entry_price) / entry_price * 100
+                if pnl_pct < -self.stop_loss_pct:
+                    exit_price = close_price * (1 - self.slippage)
+                    proceeds = position * exit_price
+                    commission = proceeds * self.commission_rate
+                    capital += proceeds - commission
+                    trades.append({
+                        'time': str(timestamp),
+                        'side': 'sell',
+                        'price': round(exit_price, 2),
+                        'shares': round(position, 6),
+                        'commission': round(commission, 2),
+                        'pnl_pct': round(pnl_pct, 2),
+                        'reason': 'stop_loss',
+                    })
+                    position = 0
+                    equity = capital + position * close_price
+                    equity_curve.append({'time': str(timestamp), 'equity': round(equity, 2)})
+                    continue
+
+            # 买入信号（含最大仓位限制）
+            if signal == 1 and position == 0 and not risk_stopped:
                 entry_price = close_price * (1 + self.slippage)
-                shares = capital / entry_price
-                commission = capital * self.commission_rate
+                max_invest = capital * self.max_position_pct
+                shares = max_invest / entry_price
+                commission = max_invest * self.commission_rate
                 capital -= commission
                 position = shares
                 trades.append({
@@ -125,7 +180,7 @@ class BacktestEngine:
                 })
 
             # 卖出信号
-            elif signal == -1 and position > 0:
+            elif signal == -1 and position > 0 and not risk_stopped:
                 exit_price = close_price * (1 - self.slippage)
                 proceeds = position * exit_price
                 commission = proceeds * self.commission_rate
@@ -167,7 +222,7 @@ class BacktestEngine:
             if dd > max_drawdown:
                 max_drawdown = dd
 
-        # 计算夏普比率（简化版）
+        # 计算夏普比率
         if len(equity_values) > 1:
             returns = pd.Series(equity_values).pct_change().dropna()
             if returns.std() > 0:
@@ -176,6 +231,14 @@ class BacktestEngine:
                 sharpe = 0
         else:
             sharpe = 0
+
+        # 计算胜率（防除零）
+        closed_trades = [t for t in trades if t.get('pnl_pct') is not None]
+        if closed_trades:
+            win_count = len([t for t in closed_trades if t['pnl_pct'] > 0])
+            win_rate = win_count / len(closed_trades) * 100
+        else:
+            win_rate = 0
 
         return {
             'code': 0,
@@ -186,18 +249,21 @@ class BacktestEngine:
             'max_drawdown_pct': round(max_drawdown, 2),
             'sharpe_ratio': round(sharpe, 2),
             'total_trades': len(trades),
-            'win_rate': round(len([t for t in trades if t.get('pnl_pct', 0) > 0]) / max(len([t for t in trades if t.get('pnl_pct') is not None]), 1) * 100, 2) if any(t.get('pnl_pct') is not None for t in trades) else 0,
-            'trades': trades[-50:],  # 最近50笔交易
-            'equity_curve': equity_curve[-100:],  # 最近100个点
+            'win_rate': round(win_rate, 2),
+            'trades': trades[-50:],
+            'equity_curve': equity_curve[-100:],
         }
 
 
-# 单例
+# 线程安全单例
 _backtest_engine = None
+_backtest_engine_lock = threading.Lock()
 
 
 def get_backtest_engine():
     global _backtest_engine
     if _backtest_engine is None:
-        _backtest_engine = BacktestEngine()
+        with _backtest_engine_lock:
+            if _backtest_engine is None:
+                _backtest_engine = BacktestEngine()
     return _backtest_engine
