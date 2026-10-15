@@ -205,8 +205,12 @@ async def get_nexus_file(filename: str):
         return {'code': 1, 'msg': 'Invalid filename'}
     nexus_dir = os.path.abspath(os.path.join(VC_ROOT, 'memory', 'nexus'))
     filepath = os.path.abspath(os.path.join(nexus_dir, filename))
-    # 安全校验 2：解析后的绝对路径必须仍在 nexus 目录内
-    if not filepath.startswith(nexus_dir + os.sep):
+    # 安全校验 2：解析后的绝对路径必须与 nexus 目录同根（commonpath 包含检查）
+    try:
+        escaped = os.path.commonpath([nexus_dir, filepath]) != nexus_dir
+    except ValueError:
+        escaped = True  # 跨盘符等异常路径一律拒绝
+    if escaped:
         return {'code': 1, 'msg': 'Invalid filename'}
     if not os.path.isfile(filepath):
         return {'code': 1, 'msg': 'File not found'}
