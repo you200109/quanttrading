@@ -8,11 +8,14 @@
 #
 # 版本升级一律通过 Dependabot PR 进行，合并前须跑通 CI 全量测试。
 
-# OKX 交易所 SDK（okx-exchange：内嵌 ccxt 的 OKX 客户端；模块名 okx，import 需 aiohttp）
+# OKX 交易所 SDK（okx-exchange：内嵌 ccxt 的 OKX 客户端；模块名 okx）
 okx-exchange==0.0.169
 
-# 异步 HTTP（okx-exchange 的 OkxAsync/OkxWs 与 import 链需要）
+# 异步 HTTP（okx-exchange 的 OkxAsync/OkxWs 与 import 链需要；上游元数据未声明依赖）
 aiohttp==3.14.5
+
+# 加密原语（内嵌 ccxt base exchange 顶层硬导入，import 链必需；上游元数据未声明）
+cryptography==50.0.2
 
 # 技术指标库
 pandas-ta==0.4.71b0

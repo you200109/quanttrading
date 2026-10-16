@@ -9,6 +9,7 @@ authors = [{ name = "you200109" }]
 dependencies = [
     "okx-exchange==0.0.169",
     "aiohttp==3.14.5",
+    "cryptography==50.0.2",
     "pandas-ta==0.4.71b0",
     "fastapi==0.143.2",
     "uvicorn==0.54.0",
