@@ -3,35 +3,50 @@
   "watched": {
     "freqtrade/freqtrade": {
       "last_seen_tag": "2026.9",
-      "checked_at": "2026-10-16T16:40:03.054305+00:00",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
       "alerted_tag": "2026.9"
     },
     "ranaroussi/quantstats": {
       "last_seen_tag": "v0.0.86",
-      "checked_at": "2026-10-16T16:40:03.054305+00:00",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
       "alerted_tag": "v0.0.86"
     },
     "TauricResearch/TradingAgents": {
       "last_seen_tag": "v0.6.0",
-      "checked_at": "2026-10-16T16:40:03.054305+00:00",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
       "alerted_tag": "v0.6.0"
     },
     "headroomlabs-ai/headroom": {
       "last_seen_tag": "v0.41.0",
-      "checked_at": "2026-10-16T16:40:03.054305+00:00",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
       "alerted_tag": "v0.41.0"
     },
     "unclecode/crawl4ai": {
       "last_seen_tag": "v0.9.5",
-      "checked_at": "2026-10-16T16:40:03.054305+00:00",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
       "alerted_tag": "v0.9.5"
+    },
+    "ZhuLinsen/daily_stock_analysis": {
+      "last_seen_tag": "v3.33.0",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
+      "alerted_tag": "v3.33.0"
+    },
+    "crewAIInc/crewAI": {
+      "last_seen_tag": "1.15.28",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
+      "alerted_tag": "1.15.28"
+    },
+    "microsoft/qlib": {
+      "last_seen_tag": "v0.9.8",
+      "checked_at": "2026-10-16T19:04:00.903720+00:00",
+      "alerted_tag": "v0.9.8"
     }
   },
   "ci": {
-    "last_rate": 0.95
+    "last_rate": 1.0
   },
   "deps": {
     "last_issue_month": "2026-10"
   },
-  "updated_at": "2026-10-16T16:40:09.026391+00:00"
+  "updated_at": "2026-10-16T19:04:04.786409+00:00"
 }
