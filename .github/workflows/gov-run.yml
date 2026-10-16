@@ -55,7 +55,12 @@ jobs:
         with:
           python-version: '3.12'
 
-      # scripts/gov/* 全部标准库实现（P6a-P6e 的设计约束）——本工作流无需 pip install
+      # 治理工具链依赖走 requirements-gov.txt：PyYAML 是 config.py 解析 config.yml 的
+      # 硬依赖（首轮 dispatch 正是被这条缺失拦在 exit 2——本地 venv 有，CI 没有）；
+      # radon/codespell 供 metrics 使用（缺失会降级 skipped，但这里一次装齐）
+      - name: Install governance toolchain
+        run: pip install -r requirements-gov.txt
+
       - name: Run governance orchestration
         run: python -m scripts.gov.run --mode "$RUN_MODE" --create-issues --sync-memory --print
 
