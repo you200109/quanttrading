@@ -1,23 +1,32 @@
 """
 OKX 交易服务模块
-- 私有 REST API: 挂单、历史委托、成交明细、账单流水
-- 私有 WebSocket: 订单状态实时推送
-- 模拟盘/实盘切换
-适配 okx 包 2.1.2 版本
+- 私有 REST API: 挂单、历史委托、成交明细、账单流水（okx-exchange 原始端点）
+- 私有 WebSocket: 订单状态实时推送（自实现 HMAC 登录，与 SDK 无关）
+- 模拟盘/实盘切换（sandbox 模式 = x-simulated-trading: 1 请求头）
+SDK: okx-exchange 0.0.169（内嵌 ccxt 的 OkxSync 同步客户端；模块名 okx）
+
+错误契约（与换血前 pyted okx 2.1.2 的对外行为对齐）：
+- 业务错误（HTTP 200 但 code != '0'）：ccxt 会抛 BaseError。
+  getter 记 warning 日志后按旧版语义返回默认值（[] / {}）；
+  下单/撤单尽力从异常消息恢复 OKX 原始响应 dict 返回。
+- 传输层错误（NetworkError 家族，含超时）：原样上抛（与旧版一致）。
 """
 import os
 import json
 import asyncio
+import logging
 import threading
 import websockets
 import hmac
 import base64
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-import okx.api.trade as Trade
-import okx.api.account as Account
+from okx import OkxSync
+from okx.ccxt.base.errors import BaseError, NetworkError
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+
+logger = logging.getLogger('OKXTradeService')
 
 
 class OKXTradeService:
@@ -38,17 +47,54 @@ class OKXTradeService:
         if simulated is None:
             simulated = os.getenv('OKX_SIMULATED', '1') == '1'
         self.simulated = simulated
-        self.flag = '1' if simulated else '0'
-
-        self.trade_api = Trade.Trade(
-            key=self.api_key, secret=self.secret_key,
-            passphrase=self.passphrase, flag=self.flag
-        )
-        self.account_api = Account.Account(
-            key=self.api_key, secret=self.secret_key,
-            passphrase=self.passphrase, flag=self.flag
-        )
+        self.client = OkxSync({
+            'apiKey': self.api_key,
+            'secret': self.secret_key,
+            'password': self.passphrase,
+            'hostname': os.getenv('OKX_API_HOST', 'www.okx.com'),
+            'sandbox': simulated,
+            'enableRateLimit': True,
+        })
         self._ws_private = None
+
+    # ==================== 响应解析 ====================
+
+    @staticmethod
+    def _recover_response(exc):
+        """从 ccxt 异常消息尽力恢复 OKX 原始响应体。
+
+        ccxt 的 handle_errors 在异常消息中携带接口原始 JSON
+        （格式："okx {原始响应}"）；恢复成功可保持下单/撤单
+        返回"OKX 原始响应 dict"的旧版契约。恢复失败返回 None。
+        """
+        text = str(exc)
+        start = text.find('{')
+        if start != -1:
+            try:
+                parsed = json.loads(text[start:])
+            except ValueError:
+                return None
+            if isinstance(parsed, dict):
+                return parsed
+        return None
+
+    def _call(self, name, request, params, default):
+        """调用 okx-exchange 原始端点并按旧版契约解析响应。
+
+        - 传输层错误（NetworkError 家族）：原样上抛
+        - 业务错误（BaseError）：记 warning，按旧版语义落 default
+        - code == '0'：返回 data（缺省 default）
+        """
+        try:
+            resp = request(params)
+        except NetworkError:
+            raise
+        except BaseError as exc:
+            logger.warning('OKX %s 业务错误: %s', name, exc)
+            return default
+        if isinstance(resp, dict) and resp.get('code') == '0':
+            return resp.get('data', default)
+        return default
 
     # ==================== 挂单（未成交订单） ====================
 
@@ -57,66 +103,65 @@ class OKXTradeService:
         params = {'instType': inst_type}
         if inst_id:
             params['instId'] = inst_id
-        resp = self.trade_api.get_orders_pending(**params)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_trade_orders_pending',
+            self.client.private_get_trade_orders_pending, params, [])
 
     # ==================== 历史委托 ====================
 
     def get_orders_history(self, inst_type='SPOT', limit='50'):
         """获取近 7 天历史委托"""
-        resp = self.trade_api.get_orders_history(instType=inst_type, limit=limit)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_trade_orders_history',
+            self.client.private_get_trade_orders_history,
+            {'instType': inst_type, 'limit': limit}, [])
 
     def get_orders_history_archive(self, inst_type='SPOT', limit='50'):
         """获取近 3 个月历史委托（归档）"""
-        resp = self.trade_api.get_orders_history_archive(instType=inst_type, limit=limit)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_trade_orders_history_archive',
+            self.client.private_get_trade_orders_history_archive,
+            {'instType': inst_type, 'limit': limit}, [])
 
     # ==================== 成交明细 ====================
 
     def get_fills(self, inst_type='SPOT', limit='50'):
         """获取近 3 天成交明细"""
-        resp = self.trade_api.get_fills(instType=inst_type, limit=limit)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_trade_fills',
+            self.client.private_get_trade_fills,
+            {'instType': inst_type, 'limit': limit}, [])
 
     def get_fills_history(self, inst_type='SPOT', limit='50'):
         """获取近 3 个月成交明细（归档）"""
-        resp = self.trade_api.get_fills_history(instType=inst_type, limit=limit)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_trade_fills_history',
+            self.client.private_get_trade_fills_history,
+            {'instType': inst_type, 'limit': limit}, [])
 
     # ==================== 账户账单流水 ====================
 
     def get_account_bills(self, limit='50'):
         """获取近 7 天账户账单流水"""
-        resp = self.account_api.get_bills(limit=limit)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_account_bills',
+            self.client.private_get_account_bills, {'limit': limit}, [])
 
     def get_account_bills_archive(self, limit='50'):
         """获取近 3 个月账户账单流水（归档）"""
-        resp = self.account_api.get_bills_archive(limit=limit)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_account_bills_archive',
+            self.client.private_get_account_bills_archive, {'limit': limit}, [])
 
     # ==================== 账户信息 ====================
 
     def get_account_balance(self):
         """获取账户余额"""
-        resp = self.account_api.get_balance()
-        if isinstance(resp, dict) and resp.get('code') == '0' and resp.get('data'):
-            return resp['data'][0]
+        data = self._call(
+            'private_get_account_balance',
+            self.client.private_get_account_balance, {}, [])
+        if data:
+            return data[0]
         return {}
 
     def get_account_position(self, inst_type=None):
@@ -124,15 +169,14 @@ class OKXTradeService:
         params = {}
         if inst_type:
             params['instType'] = inst_type
-        resp = self.account_api.get_positions(**params)
-        if isinstance(resp, dict) and resp.get('code') == '0':
-            return resp.get('data', [])
-        return []
+        return self._call(
+            'private_get_account_positions',
+            self.client.private_get_account_positions, params, [])
 
     # ==================== 下单 / 撤单 ====================
 
     def place_order(self, inst_id, side, ord_type, sz, px=None, td_mode='cash'):
-        """下单（含参数校验）"""
+        """下单（含参数校验；业务错误返回 OKX 原始响应 dict）"""
         if side not in self.VALID_SIDES:
             return {'code': '1', 'msg': f'Invalid side: {side}, must be one of {self.VALID_SIDES}'}
         if ord_type not in self.VALID_ORD_TYPES:
@@ -150,13 +194,24 @@ class OKXTradeService:
         }
         if px:
             params['px'] = str(px)
-        resp = self.trade_api.set_order(**params)
-        return resp
+        try:
+            return self.client.private_post_trade_order(params)
+        except NetworkError:
+            raise
+        except BaseError as exc:
+            logger.warning('OKX 下单业务错误: %s', exc)
+            return self._recover_response(exc) or {'code': '1', 'msg': str(exc)}
 
     def cancel_order(self, inst_id, ord_id):
-        """撤单"""
-        resp = self.trade_api.set_cancel_order(instId=inst_id, ordId=ord_id)
-        return resp
+        """撤单（业务错误返回 OKX 原始响应 dict）"""
+        try:
+            return self.client.private_post_trade_cancel_order(
+                {'instId': inst_id, 'ordId': ord_id})
+        except NetworkError:
+            raise
+        except BaseError as exc:
+            logger.warning('OKX 撤单业务错误: %s', exc)
+            return self._recover_response(exc) or {'code': '1', 'msg': str(exc)}
 
     # ==================== 私有 WebSocket ====================
 
@@ -187,7 +242,7 @@ class OKXTradeService:
         login_resp = await ws.recv()
         login_data = json.loads(login_resp)
         if login_data.get('code') != '0':
-            print(f'Private WS login failed: {login_data.get("msg", "unknown error")}')
+            logger.warning('Private WS login failed: %s', login_data.get('msg', 'unknown error'))
             await ws.close()
             return
 

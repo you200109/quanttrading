@@ -1,8 +1,8 @@
 """
 OKX 数据服务核心模块
-- REST API: 多周期 K 线、盘口深度、Ticker 行情
-- WebSocket: 实时数据推送通道
-适配 okx 包 2.1.2 版本，支持代理和超时保护
+- REST API: 多周期 K 线、盘口深度、Ticker 行情（requests 直连 OKX v5，不依赖交易所 SDK）
+- WebSocket: 实时数据推送通道（websockets 直连）
+支持代理和超时保护
 """
 import os
 import json

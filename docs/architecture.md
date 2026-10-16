@@ -36,7 +36,7 @@
 | 后端 | Python 3.12 + FastAPI + Uvicorn | 异步API，自动文档 |
 | 数据源 | OKX API (www.okx.com) | 官方域名；如需镜像网关请经 OKX_API_HOST 覆盖并自行核实域名安全 |
 | 指标库 | pandas-ta 0.4.71b0 | 508个技术指标 |
-| 交易所SDK | okx 2.1.2 | 社区包（pyted/okx，非 OKX 官方；官方为 python-okx） |
+| 交易所SDK | okx-exchange 0.0.169 | 社区包（内嵌 ccxt，模块名 okx，import 需 aiohttp；非 OKX 官方，官方为 python-okx） |
 | CI/CD | GitHub Actions | 20个自动化工作流 |
 
 ## 项目结构

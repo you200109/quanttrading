@@ -1,16 +1,18 @@
 # QuantTrading - Python 依赖清单（固定版本，保证构建可复现）
 #
-# 已知上游约束（安全相关，详见 SECURITY-NOTES）：
-# 1. okx==2.1.2 精确锁定 urllib3==1.26.12，导致 urllib3 相关 CVE 暂无法通过
-#    升级依赖消除；缓解措施为网络层出口控制（仅放行 OKX 官方域名）。
-#    待 okx SDK 发布放开 urllib3 约束的版本后同步升级。
-# 2. pandas 锁定 <3.0：pandas 3.0 为破坏性大版本，pandas-ta / dccd 等
+# 已知上游约束（安全相关）：
+# 1. pandas 锁定 <3.0：pandas 3.0 为破坏性大版本，pandas-ta / dccd 等
 #    量化依赖链尚未适配，避免 CI 与本地环境漂移。
+#    （原 "okx==2.1.2 锁死 urllib3==1.26.12" 的安全约束已随 OKX K1 换血
+#     （pyted okx → okx-exchange）解除，urllib3 升 2.x 并显式锁定。）
 #
 # 版本升级一律通过 Dependabot PR 进行，合并前须跑通 CI 全量测试。
 
-# OKX 交易所 SDK（注意：上游锁定 urllib3==1.26.12）
-okx==2.1.2
+# OKX 交易所 SDK（okx-exchange：内嵌 ccxt 的 OKX 客户端；模块名 okx，import 需 aiohttp）
+okx-exchange==0.0.169
+
+# 异步 HTTP（okx-exchange 的 OkxAsync/OkxWs 与 import 链需要）
+aiohttp==3.14.5
 
 # 技术指标库
 pandas-ta==0.4.71b0
@@ -28,6 +30,8 @@ numpy==2.2.6
 
 # HTTP 请求
 requests==2.34.2
+# 此前被 pyted okx==2.1.2 上游锁在 1.26.12（CVE 无法消除的根源）；K1 后显式升 2.x
+urllib3==2.8.0
 
 # 环境变量管理
 python-dotenv==1.2.4
