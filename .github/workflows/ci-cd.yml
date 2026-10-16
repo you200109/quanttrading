@@ -54,6 +54,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 pytest -q
           if [ -f requirements.txt ]; then pip install -r requirements.txt -q; fi
+          # tests/ 全量收集需要治理工具链（PyYAML 等）：与 ci.yml 的安装步骤保持一致，
+          # 不装会以"收集错误"形式红掉（2026-10-17 K1 首次触发本工作流暴露的存量缺口）
+          pip install -r requirements-gov.txt -q
 
       - name: Lint with flake8
         run: |
@@ -116,7 +119,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt -q 2>/dev/null || pip install fastapi uvicorn python-dotenv okx pandas-ta websockets requests -q
+          pip install -r requirements.txt -q 2>/dev/null || pip install fastapi uvicorn python-dotenv okx-exchange aiohttp cryptography pandas-ta websockets requests -q
 
       - name: Prepare deployment package
         run: |
