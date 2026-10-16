@@ -36,8 +36,8 @@
 | 后端 | Python 3.12 + FastAPI + Uvicorn | 异步API，自动文档 |
 | 数据源 | OKX API (www.okx.com) | 官方域名；如需镜像网关请经 OKX_API_HOST 覆盖并自行核实域名安全 |
 | 指标库 | pandas-ta 0.4.71b0 | 508个技术指标 |
-| 交易所SDK | okx 2.1.2 | 官方Python SDK |
-| CI/CD | GitHub Actions | 65个自动化工作流 |
+| 交易所SDK | okx 2.1.2 | 社区包（pyted/okx，非 OKX 官方；官方为 python-okx） |
+| CI/CD | GitHub Actions | 20个自动化工作流 |
 
 ## 项目结构
 
@@ -56,6 +56,6 @@ quanttrading/
 ├── vigilant-couscous/        # AI交易进化系统
 ├── docs/                     # 文档
 ├── scripts/                  # 运维脚本
-├── .github/workflows/        # 21个工作流
+├── .github/workflows/        # 20个工作流
 └── .env                      # 环境配置
 ```

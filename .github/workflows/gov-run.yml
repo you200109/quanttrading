@@ -1,0 +1,69 @@
+# P6f（2026-10-16）：①发现 → ②筛选 → ⑤学习 → ③监控 的每日编排。
+# 原 auto-search.yml / okx-scanner.yml（每小时双通道任务风暴，PM 时段 20+ 个
+# 空转工作流之一脉）已退休：发现能力并入 scripts/gov/discover.py + config.yml
+# 的检索面（OKX 关键词已入列）。
+#
+# 知识库回写为什么不是一条 push main 的步骤：main 有分支保护（要求走 PR），
+# Actions 的 GITHUB_TOKEN 直推会被拒；GITHUB_TOKEN 造的 PR 又不触发 CI（递归
+# 抑制）——所以知识库改走不受保护的 gov-memory 分支（run.py --sync-memory，
+# 零新增密钥）。本地要消费 CI 的知识库：
+#   git fetch origin gov-memory
+#   git checkout FETCH_HEAD -- vigilant-couscous/memory/knowledge
+#
+# 失败纪律：任一阶段非零退出 → 失败即停 → 自动落一条 [gov-run] Issue（标题
+# 指纹去重 + 开放数防洪；拿不到开放列表则零变更）。详见 scripts/gov/run.py。
+
+name: Gov Run
+
+on:
+  schedule:
+    # 每日 02:30 Asia/Shanghai（= 18:30 UTC 前一天）：discover → score → analyze → monitor
+    - cron: '30 18 * * *'
+    # 每月 1 日 04:00 Asia/Shanghai（= 20:00 UTC 前一天）：月度依赖健康报告
+    - cron: '0 20 1 * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '运行模式'
+        type: choice
+        options: [daily, deps]
+        default: daily
+
+permissions:
+  contents: write   # 推 gov-memory 知识库分支（该分支不受保护，直推合法）
+  issues: write     # monitor 告警 + [gov-run] 失败上报
+  actions: read     # monitor 自身 CI 成功率检查（读取 Actions runs）
+
+concurrency:
+  group: gov-run
+  cancel-in-progress: false
+
+jobs:
+  gov-run:
+    name: Governance Run
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || (github.event.schedule == '0 20 1 * *' && 'deps' || 'daily') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # scripts/gov/* 全部标准库实现（P6a-P6e 的设计约束）——本工作流无需 pip install
+      - name: Run governance orchestration
+        run: python -m scripts.gov.run --mode "$RUN_MODE" --create-issues --sync-memory --print
+
+      - name: Upload run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gov-run-${{ github.run_number }}
+          path: reports/
+          retention-days: 90
+          if-no-files-found: ignore

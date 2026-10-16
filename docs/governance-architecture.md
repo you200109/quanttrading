@@ -58,7 +58,7 @@
 | REST（search / repos / releases / contents） | 发现与监控主通道 | ✅ P6a `github_api.py` |
 | Actions API | CI 度量、`repository_dispatch` 触发 | ✅ 度量（P5d）；触发 🔜 P7 |
 | GraphQL | 批量仓库详情（省配额） | 🔜 P7 评估 |
-| Webhooks / dispatch | backtest 已有外部触发先例 | ✅ 先例；治理编排 🔜 P6f |
+| Webhooks / dispatch | backtest 已有外部触发先例 | ✅ 先例；治理编排 ✅ P6f（`workflow_dispatch`） |
 | Contents / Trees | 浅克隆后的只读文件获取 | ✅ `github_api.get_file`（P5 已用） |
 
 ## 2. 配额（RAT）治理
@@ -70,7 +70,7 @@
 | GraphQL | 5000 点/h | P7 批量查询时计入预算 |
 | Actions 分钟 | 公共仓库免费 | gov-* 全部低频（日 / 周 / 6h）；单 workflow 多步骤合并，避免任务风暴 |
 
-令牌分层：CI 内用 `GITHUB_TOKEN`（只读为主）；本地与降级用 read-only fine-grained PAT（`GH_TOKEN`）；**任何令牌不入库**；监控层检查 `.git/config` 与工作流明文引用（审计 §8.3 遗留项）。
+令牌分层：CI 内用 `GITHUB_TOKEN`（只读为主；知识库回写走不受保护的 `gov-memory` 分支，零新增密钥，见 §4）；本地与降级用 read-only fine-grained PAT（`GH_TOKEN`）；**任何令牌不入库**；监控层检查 `.git/config` 与工作流明文引用（审计 §8.3 遗留项）。
 
 
 ---
@@ -89,7 +89,7 @@
 
 **基础设施**（P6a 已交付）：`config.yml`（唯一配置源）、`schemas.py`（四契约）、`config.py`（严格校验，不静默默认）、`store.py`（reports/ 与 knowledge/ 双存储）、`github_api.py`（预算化 REST 客户端）。
 
-**编排**：`gov-metrics.yml` ✅（P5d）；`gov-run.yml` 🔜 P6f（每日 `discover → score → analyze` 串行，失败即停并显式报 Issue）；`auto-search.yml` / `okx-scanner.yml` 🗑 于 P6f 退休（能力已并入 ①，避免任务风暴）。
+**编排**：`gov-metrics.yml` ✅（P5d）；`gov-run.yml` ✅（P6f：每日 `discover → score → analyze → monitor` 串行、失败即停并落 `[gov-run]` Issue；月度 `--deps-issue` 依赖健康报告；知识库经 `gov-memory` 分支回写，见 §4）。`auto-search.yml` / `okx-scanner.yml` 🗑 已退休（P6f：能力并入 ① 与 `config.yml` 检索面，每小时任务风暴终结）。
 
 ## 4. 数据契约与存储
 
@@ -105,7 +105,8 @@
 **双存储分工**：
 
 - `reports/`：运行时产物（日期分目录），`.gitignore` 不入库，随 Actions artifact 保留 90 天——**可重放、可回溯，但不是记忆**；
-- `vigilant-couscous/memory/knowledge/`：长期记忆（项目卡 `owner__repo.json`、`decisions.jsonl` 追加式），随仓库版本化——**治理系统跨运行认出同一个世界**。
+- `vigilant-couscous/memory/knowledge/`：长期记忆（项目卡 `owner__repo.json`、`decisions.jsonl` 追加式），随仓库版本化——**治理系统跨运行认出同一个世界**；
+- **知识库回写（CI）**：main 有分支保护（要求 PR；`enforce_admins=false` 只豁免管理员），Actions 的 `GITHUB_TOKEN` 直推会被拒、造的 PR 又不触发 CI（递归抑制）——CI 的知识库因此经**不受保护的 `gov-memory` 分支**往返（`run.py --sync-memory` + `memory_branch.py`）：运行前 restore、运行后 persist，只提交知识库目录、无变化不产生空提交；**restore 失败时放弃 persist**（绝不把未恢复的工作区覆盖回分支）。**知识库主权归 CI**：本地真实运行前先 `git fetch origin gov-memory && git checkout FETCH_HEAD -- vigilant-couscous/memory/knowledge`；演练请用临时知识库配置。
 
 ## 5. 关键数据流与运行节奏
 
@@ -119,8 +120,9 @@ GitHub API 面（RAT 预算）
 
 | 节奏 | 内容 |
 | --- | --- |
-| 每日 02:30 | `gov-run`：①→②→（A/B 增量）⑤，产物入 `reports/<date>/` |
+| 每日 02:30 | `gov-run`：①→②→（A/B 增量）⑤→③ monitor，产物入 `reports/<date>/`；失败即停 + `[gov-run]` Issue |
 | 每日 03:00 | `gov-metrics`：④ 自身 CI 度量 |
+| 每月 1 日 | `gov-run --mode deps`：月度依赖健康报告 |
 | 每周五 | ③ 汇总报告 Issue + ⑥ 整合提案（等人工批准） |
 | 每 6 小时 | ⑦ meta-evolve v2（低配额，读多写少） |
 | 事件驱动 | PR CI 结果回写 `decisions.jsonl` outcome |
@@ -159,8 +161,8 @@ GitHub API 面（RAT 预算）
 
 ## 9. 实施状态与路线图
 
-- **已成**：P0-P5（体检→CI 门禁→假度量清零→安全基线→自动化收敛）、P6a 基础设施、P6b ①发现、P6c ②筛选、P6d ③监控。
-- **本年**：P6e ⑤学习 → P6f `gov-run.yml` 编排（旧 workflow 退休）→ P7 ⑥⑦整合与演进闭环 + `/api/vc/memory` 并入 → P8 可观测与性能回归。
+- **已成**：P0-P5（体检→CI 门禁→假度量清零→安全基线→自动化收敛）、P6a 基础设施、P6b ①发现、P6c ②筛选、P6d ③监控、P6e ⑤学习、P6f `gov-run.yml` 编排（旧 workflow 退休、知识库 gov-memory 分支回写）。
+- **本年**：P7 ⑥⑦整合与演进闭环 + `/api/vc/memory` 并入 → P8 可观测与性能回归。
 - **出口标准**（每阶段）：六门禁全绿、Actions 用量在预算内、CodeQL 无新增告警、产物字段可被下游模块消费。
 
 ## 附录：文档关系

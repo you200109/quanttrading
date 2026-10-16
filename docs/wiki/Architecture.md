@@ -24,5 +24,5 @@
 - CodeQL: Code security scanning
 - Docker: Build and push to GHCR
 - Publish: PyPI package publishing
-- OKX Scanner: Hourly OKX project search
+- Gov Run: Daily governance orchestration (discover → score → analyze → monitor)
 - Dependabot: Dependency updates

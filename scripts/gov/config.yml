@@ -21,6 +21,10 @@ discovery:
         - backtesting engine
         - orderbook market data
         - factor investing library
+        # OKX 面（原 okx-scanner / auto-search 关键词面并入 P6f；检索预算 22/24）
+        - okx trading bot
+        - okx api python
+        - okx quantitative trading
       topics:
         - quantitative-finance
         - algorithmic-trading
