@@ -3,33 +3,35 @@
   "watched": {
     "freqtrade/freqtrade": {
       "last_seen_tag": "2026.9",
-      "checked_at": "2026-10-16T16:25:44.995151+00:00",
+      "checked_at": "2026-10-16T16:40:03.054305+00:00",
       "alerted_tag": "2026.9"
     },
     "ranaroussi/quantstats": {
       "last_seen_tag": "v0.0.86",
-      "checked_at": "2026-10-16T16:25:44.995151+00:00",
+      "checked_at": "2026-10-16T16:40:03.054305+00:00",
       "alerted_tag": "v0.0.86"
     },
     "TauricResearch/TradingAgents": {
       "last_seen_tag": "v0.6.0",
-      "checked_at": "2026-10-16T16:25:44.995151+00:00",
+      "checked_at": "2026-10-16T16:40:03.054305+00:00",
       "alerted_tag": "v0.6.0"
     },
     "headroomlabs-ai/headroom": {
       "last_seen_tag": "v0.41.0",
-      "checked_at": "2026-10-16T16:25:44.995151+00:00",
+      "checked_at": "2026-10-16T16:40:03.054305+00:00",
       "alerted_tag": "v0.41.0"
     },
     "unclecode/crawl4ai": {
       "last_seen_tag": "v0.9.5",
-      "checked_at": "2026-10-16T16:25:44.995151+00:00",
+      "checked_at": "2026-10-16T16:40:03.054305+00:00",
       "alerted_tag": "v0.9.5"
     }
   },
   "ci": {
     "last_rate": 0.95
   },
-  "deps": {},
-  "updated_at": "2026-10-16T16:25:49.043510+00:00"
+  "deps": {
+    "last_issue_month": "2026-10"
+  },
+  "updated_at": "2026-10-16T16:40:09.026391+00:00"
 }
