@@ -80,6 +80,8 @@ SCORING_SPEC: dict[str, tuple] = {
 }
 
 MONITORING_SPEC: dict[str, tuple] = {
+    "self_repo": _t(str),
+    "max_requests_per_run": _t(int),
     "watched": _t(list),
     "self_requirements": _t(list),
     "alerts": _t(dict),

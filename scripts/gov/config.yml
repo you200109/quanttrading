@@ -71,6 +71,8 @@ scoring:
 
 # ③ 监控：外部项目 release 跟踪 + 自身依赖健康 + 配额
 monitoring:
+  self_repo: 'you200109/quanttrading'   # 自身仓库：CI 成功率检查与 Issue 告警落点
+  max_requests_per_run: 20              # 单轮 GitHub API 请求预算（release/CI/Issue 共用）
   watched:                       # 已在用或计划采用的上游项目
     - repo: 'freqtrade/freqtrade'
       kind: release

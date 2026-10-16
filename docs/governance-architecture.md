@@ -80,8 +80,8 @@
 | 层 | 模块 | 触发 | 输入 → 输出 | 要点 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | ① | `discover.py` | 每日（gov-run） | Search API → `reports/<date>/discovery.json` | 3 域关键词、min_stars 过滤、已知项目跳过、预算截断 | ✅ P6b |
-| ② | `score.py` | 发现后同 job | discovery → `reports/<date>/shortlist.json` | 7 维加权、A/B/C 分层、白名单直通、黑名单剔除 | 🔄 P6c |
-| ③ | `monitor.py` | 每日 | 项目卡 → `reports/metrics/` + Issue | 版本 / release 跟踪、依赖健康、响应时长 | 🔜 P6d |
+| ② | `score.py` | 发现后同 job | discovery → `reports/<date>/shortlist.json` | 7 维加权、A/B/C 分层、白名单直通、黑名单剔除 | ✅ P6c |
+| ③ | `monitor.py` | 每日 | watched + 项目卡 → `reports/metrics/` + Issue | 版本 / release 跟踪、依赖健康、CI 阈值、告警去重/防洪落地 | ✅ P6d |
 | ④ | `metrics.py` | 每日 + CI 后 | Actions API → `reports/quality/` | 自查 CI 成功率 / 时长 / 覆盖率趋势 | ✅ P5d |
 | ⑤ | `analyze.py` | A/B 级项目 | 浅克隆 → `memory/knowledge/projects/*.json` | 只读静态分析、项目卡、学习笔记 | 🔜 P6e |
 | ⑥ | `integrate.py` | 每周 / 人工批准 | 项目卡 + 提案 → 分支 + PR | 依赖升级 / 适配器 / 特性移植，白名单制自动 PR | 🔜 P7 |
@@ -159,8 +159,8 @@ GitHub API 面（RAT 预算）
 
 ## 9. 实施状态与路线图
 
-- **已成**：P0-P5（体检→CI 门禁→假度量清零→安全基线→自动化收敛）、P6a 基础设施、P6b ①发现。
-- **本年**：P6c ②筛选（本 PR）→ P6d ③监控 → P6e ⑤学习 → P6f `gov-run.yml` 编排（旧 workflow 退休）→ P7 ⑥⑦整合与演进闭环 + `/api/vc/memory` 并入 → P8 可观测与性能回归。
+- **已成**：P0-P5（体检→CI 门禁→假度量清零→安全基线→自动化收敛）、P6a 基础设施、P6b ①发现、P6c ②筛选、P6d ③监控。
+- **本年**：P6e ⑤学习 → P6f `gov-run.yml` 编排（旧 workflow 退休）→ P7 ⑥⑦整合与演进闭环 + `/api/vc/memory` 并入 → P8 可观测与性能回归。
 - **出口标准**（每阶段）：六门禁全绿、Actions 用量在预算内、CodeQL 无新增告警、产物字段可被下游模块消费。
 
 ## 附录：文档关系
