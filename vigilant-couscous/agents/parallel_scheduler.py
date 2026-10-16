@@ -19,6 +19,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -264,8 +265,12 @@ class VectorizedEvolution:
             start_idx = max(sma_s, rsi_p) + 1
             if start_idx >= n_days:
                 continue
-            sma_f_vals = np.convolve(price_data, np.ones(sma_f)/sma_f, mode='valid')
-            sma_s_vals = np.convolve(price_data, np.ones(sma_s)/sma_s, mode='valid')
+            # K2（2026-10-17）：SMA 改由 pandas-ta（原实现为 numpy 卷积手写
+            # 滑动平均，已移除）；切片 period-1: 复刻 mode='valid' 对齐
+            # （第 i 个有效值 = 截至 index (period-1+i) 的窗口均值）。
+            price_series = pd.Series(price_data)
+            sma_f_vals = ta.sma(price_series, length=sma_f).to_numpy()[sma_f - 1:]
+            sma_s_vals = ta.sma(price_series, length=sma_s).to_numpy()[sma_s - 1:]
             min_len = min(len(sma_f_vals), len(sma_s_vals))
             signals = (sma_f_vals[-min_len:] > sma_s_vals[-min_len:]).astype(int)
             signal_returns = signals[:-1] * returns[-len(signals)+1:]

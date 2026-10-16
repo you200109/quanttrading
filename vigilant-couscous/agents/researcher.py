@@ -1,10 +1,15 @@
 """
 研究员 Agent - 400 指标版
 多时间框架 × 核心指标 = 200+ 指标 + 衍生指标 + 形态识别
+
+2026-10-17 K2：标准技术指标（RSI/MACD/布林带/ATR/OBV/MFI/CCI/WR/Stochastic/
+ADX/PSAR/ROC/SMA/EMA）统一迁移至 pandas-ta 成熟库；收益率/波动率/峰谷距离/
+量比/偏度峰度等派生统计与价格形态识别保留 pandas 原语（非指标公式）。
 """
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 from crewai import Agent
 
 
@@ -38,33 +43,37 @@ class ResearcherAgent:
             "recommendation": self._generate_recommendation(signals, trend)
         }
 
+    def _nan_series(self, like) -> pd.Series:
+        """与输入等索引的全 NaN 序列（pandas-ta 数据不足返回 None 时的占位）"""
+        return pd.Series(np.nan, index=like.index)
+
     def _calc_rsi(self, close, period):
-        delta = close.diff()
-        gain = delta.where(delta > 0, 0).rolling(period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-        rs = gain / loss
-        return 100 - (100 / (1 + rs))
+        """RSI（pandas-ta；K2 由手写 Cutler 式迁移）
+        口径说明见 evolution/backtest_core.calc_rsi docstring。"""
+        r = ta.rsi(close, length=int(period))
+        return self._nan_series(close) if r is None else r
 
     def _calc_macd(self, close, fast=12, slow=26, sig=9):
-        ema_fast = close.ewm(span=fast).mean()
-        ema_slow = close.ewm(span=slow).mean()
-        macd = ema_fast - ema_slow
-        signal = macd.ewm(span=sig).mean()
-        return macd, signal, macd - signal
+        """MACD（pandas-ta；列序 [MACD, 柱, 信号] → 返回 (线, 信号, 柱)）"""
+        m = ta.macd(close, fast=int(fast), slow=int(slow), signal=int(sig))
+        if m is None:
+            nan = self._nan_series(close)
+            return nan, nan, nan
+        return m.iloc[:, 0], m.iloc[:, 2], m.iloc[:, 1]
 
     def _calc_bb(self, close, period=20, std=2):
-        sma = close.rolling(period).mean()
-        s = close.rolling(period).std()
-        upper = sma + std * s
-        lower = sma - std * s
-        return upper, lower, sma, (close - lower) / (upper - lower), (upper - lower) / sma
+        """布林带（pandas-ta；返回 上轨/下轨/中轨/%B/带宽，顺序同旧实现）
+        带宽 = 库输出 BBB（100*(u-l)/mid）÷ 100，保持旧口径不带 ×100。"""
+        b = ta.bbands(close, length=int(period), std=float(std))
+        if b is None:
+            nan = self._nan_series(close)
+            return nan, nan, nan, nan, nan
+        return b.iloc[:, 2], b.iloc[:, 0], b.iloc[:, 1], b.iloc[:, 4], b.iloc[:, 3] / 100
 
     def _calc_atr(self, high, low, close, period=14):
-        hl = high - low
-        hc = abs(high - close.shift())
-        lc = abs(low - close.shift())
-        tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
-        return tr.rolling(period).mean()
+        """ATR（pandas-ta Wilder RMA 口径）"""
+        a = ta.atr(high, low, close, length=int(period))
+        return self._nan_series(close) if a is None else a
 
     def _calculate_signals(self, data: pd.DataFrame) -> dict:
         """计算 200+ 技术指标（多时间框架）"""
@@ -86,13 +95,17 @@ class ResearcherAgent:
             rsi = self._calc_rsi(close, tf)
             result[f'rsi_{p}'] = round(rsi.iloc[-1], 2)
 
-            # SMA
-            sma = close.rolling(tf).mean()
+            # SMA（K2：pandas-ta）
+            sma = ta.sma(close, length=tf)
+            if sma is None:
+                sma = self._nan_series(close)
             result[f'sma_{p}'] = round(sma.iloc[-1], 2)
             result[f'price_vs_sma_{p}'] = round(latest / sma.iloc[-1] - 1, 4) if sma.iloc[-1] > 0 else 0
 
-            # EMA
-            ema = close.ewm(span=tf).mean()
+            # EMA（K2：pandas-ta）
+            ema = ta.ema(close, length=tf)
+            if ema is None:
+                ema = self._nan_series(close)
             result[f'ema_{p}'] = round(ema.iloc[-1], 2)
 
             # 布林带
@@ -122,54 +135,57 @@ class ResearcherAgent:
             result[f'hh_dist_{p}'] = round((hh.iloc[-1] - latest) / latest, 4)
             result[f'll_dist_{p}'] = round((latest - ll.iloc[-1]) / latest, 4)
 
-        # === 成交量指标 ===
-        vol_sma = volume.rolling(20).mean()
+        # === 成交量指标（K2：滚动均值出自 pandas-ta） ===
+        vol_sma = ta.sma(volume, length=20)
+        vol_ma5 = ta.sma(volume, length=5)
+        if vol_sma is None:
+            vol_sma = self._nan_series(volume)
+        if vol_ma5 is None:
+            vol_ma5 = self._nan_series(volume)
         result['vol_ratio'] = round((volume / vol_sma).iloc[-1], 2)
-        result['vol_trend'] = round(volume.rolling(5).mean().iloc[-1] / volume.rolling(20).mean().iloc[-1] - 1, 4)
+        result['vol_trend'] = round(vol_ma5.iloc[-1] / vol_sma.iloc[-1] - 1, 4)
 
-        # OBV
-        obv = (volume * ((close.diff() > 0) * 2 - 1)).cumsum()
+        # OBV（K2：pandas-ta；平盘日不再计 -volume，首值为 NaN）
+        obv = ta.obv(close, volume)
+        if obv is None:
+            obv = self._nan_series(close)
         result['obv_change'] = round(obv.pct_change(20).iloc[-1], 4) if n >= 20 else 0
 
-        # MFI
-        tp = (high + low + close) / 3
-        mf = tp * volume
-        pos_mf = mf.where(tp > tp.shift(), 0).rolling(14).sum()
-        neg_mf = mf.where(tp < tp.shift(), 0).rolling(14).sum()
-        mfi_denom = neg_mf.replace(0, 1e-10)  # 防止除零
-        result['mfi'] = round((100 - (100 / (1 + pos_mf / mfi_denom))).iloc[-1], 2)
+        # MFI（K2：pandas-ta）
+        mfi = ta.mfi(high, low, close, volume, length=14)
+        result['mfi'] = round(float(mfi.iloc[-1]), 2) if mfi is not None else 0
 
         # === 动量指标 ===
-        # CCI
-        tp_cci = (high + low + close) / 3
-        cci = (tp_cci - tp_cci.rolling(20).mean()) / (0.015 * tp_cci.rolling(20).std())
-        result['cci'] = round(cci.iloc[-1], 2)
+        # CCI（K2：pandas-ta）
+        cci = ta.cci(high, low, close, length=20)
+        result['cci'] = round(float(cci.iloc[-1]), 2) if cci is not None else 0
 
-        # Williams %R
-        hh14 = high.rolling(14).max()
-        ll14 = low.rolling(14).min()
-        result['wr'] = round(((hh14 - close) / (hh14 - ll14) * -100).iloc[-1], 2)
+        # Williams %R（K2：pandas-ta）
+        wr = ta.willr(high, low, close, length=14)
+        result['wr'] = round(float(wr.iloc[-1]), 2) if wr is not None else 0
 
-        # Stochastic
-        k = (close - ll14) / (hh14 - ll14) * 100
-        result['stoch_k'] = round(k.iloc[-1], 2)
-        result['stoch_d'] = round(k.rolling(3).mean().iloc[-1], 2)
+        # Stochastic（K2：pandas-ta；smooth_k=1 使 %K 为原始值、%D 为 SMA3，同旧口径）
+        st = ta.stoch(high, low, close, k=14, d=3, smooth_k=1)
+        if st is not None:
+            result['stoch_k'] = round(float(st.iloc[-1, 0]), 2)
+            result['stoch_d'] = round(float(st.iloc[-1, 1]), 2)
+        else:
+            result['stoch_k'] = result['stoch_d'] = 0
 
-        # ROC
+        # ROC（K2：pandas-ta）
         for p in [5, 10, 20]:
-            result[f'roc_{p}'] = round(close.pct_change(p).iloc[-1] * 100, 2)
+            roc = ta.roc(close, length=p)
+            result[f'roc_{p}'] = round(float(roc.iloc[-1]), 2) if roc is not None else 0
 
         # === 趋势指标 ===
-        # ADX
-        plus_dm = high.diff().where(high.diff() > low.diff().abs(), 0)
-        minus_dm = low.diff().abs().where(low.diff().abs() > high.diff(), 0)
-        atr14 = self._calc_atr(high, low, close, 14)
-        plus_di = 100 * plus_dm.rolling(14).mean() / atr14
-        minus_di = 100 * minus_dm.rolling(14).mean() / atr14
-        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-        result['adx'] = round(dx.rolling(14).mean().iloc[-1], 2)
-        result['plus_di'] = round(plus_di.iloc[-1], 2)
-        result['minus_di'] = round(minus_di.iloc[-1], 2)
+        # ADX（K2：pandas-ta Wilder 口径；列序 [ADX, ADXR, DMP, DMN]）
+        adx_df = ta.adx(high, low, close, length=14)
+        if adx_df is not None:
+            result['adx'] = round(float(adx_df.iloc[-1, 0]), 2)
+            result['plus_di'] = round(float(adx_df.iloc[-1, 2]), 2)
+            result['minus_di'] = round(float(adx_df.iloc[-1, 3]), 2)
+        else:
+            result['adx'] = result['plus_di'] = result['minus_di'] = 0
 
         # 抛物线 SAR
         sar = self._calc_psar(high, low, close)
@@ -198,8 +214,10 @@ class ResearcherAgent:
         # SMA 交叉信号
         for fast, slow in [(5, 20), (10, 50), (20, 200)]:
             if n >= slow:
-                sma_f = close.rolling(fast).mean()
-                sma_s = close.rolling(slow).mean()
+                sma_f = ta.sma(close, length=fast)
+                sma_s = ta.sma(close, length=slow)
+                if sma_f is None or sma_s is None:
+                    continue
                 result[f'sma_cross_{fast}_{slow}'] = 1 if sma_f.iloc[-1] > sma_s.iloc[-1] else -1
 
         # RSI 背离
@@ -220,37 +238,11 @@ class ResearcherAgent:
         return result
 
     def _calc_psar(self, high, low, close):
-        """计算抛物线 SAR"""
-        n = len(close)
-        sar = pd.Series(np.zeros(n), index=close.index)
-        af = 0.02
-        ep = low.iloc[0]
-        trend = 1
-        sar.iloc[0] = low.iloc[0]
-
-        for i in range(1, n):
-            sar.iloc[i] = sar.iloc[i-1] + af * (ep - sar.iloc[i-1])
-            if trend == 1:
-                if low.iloc[i] < sar.iloc[i]:
-                    trend = -1
-                    sar.iloc[i] = ep
-                    ep = high.iloc[i]
-                    af = 0.02
-                else:
-                    if high.iloc[i] > ep:
-                        ep = high.iloc[i]
-                        af = min(0.2, af + 0.02)
-            else:
-                if high.iloc[i] > sar.iloc[i]:
-                    trend = 1
-                    sar.iloc[i] = ep
-                    ep = low.iloc[i]
-                    af = 0.02
-                else:
-                    if low.iloc[i] < ep:
-                        ep = low.iloc[i]
-                        af = min(0.2, af + 0.02)
-        return sar
+        """抛物线 SAR（K2：pandas-ta；长/短仓两列 SAR 合并为单列）"""
+        p = ta.psar(high, low, close)
+        if p is None:
+            return self._nan_series(close)
+        return p.iloc[:, 0].combine_first(p.iloc[:, 1])
 
     def _detect_patterns(self, close, high, low):
         """检测价格形态"""
@@ -294,8 +286,10 @@ class ResearcherAgent:
 
     def _identify_trend(self, data: pd.DataFrame) -> str:
         close = data['close']
-        sma20 = close.rolling(20).mean()
-        sma50 = close.rolling(50).mean()
+        sma20 = ta.sma(close, length=20)
+        sma50 = ta.sma(close, length=50)
+        if sma20 is None or sma50 is None:
+            return "震荡"
         if sma20.iloc[-1] > sma50.iloc[-1] and close.iloc[-1] > sma20.iloc[-1]:
             return "强势上涨"
         elif sma20.iloc[-1] > sma50.iloc[-1]:

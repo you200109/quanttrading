@@ -2,14 +2,15 @@
 回测执行内核 - P3b 合并产物
 
 背景：仓库曾有三处逐字重复的 RSI+SMA/SL/TP 回测模拟循环——
-1. evolution/backtest_validator.py:_run_backtest（实现基准，保留不改，
-   其特有的逐 bar RSI 重算、单边逻辑、holding_days 语义由
-   tests/test_backtest_baseline.py 固化）
+1. evolution/backtest_validator.py:_run_backtest（实现基准；其单边逻辑与
+   holding_days 语义由 tests/test_backtest_baseline.py 固化。K2 起其指标同样
+   出自 pandas-ta，逐 bar RSI 重算改为等价的一次性预计算）
 2. strategy/unified_evolve.py:_simulate（4 折滚动验证的抗过拟合适应度）
 3. evolution/multi_dim_evolve.py:_run_sim（6 策略模板的通用 signal_fn 驱动）
 
 本模块把后两处收敛为单一内核：
-- 指标层：calc_rsi / calc_sma（向量化，与 unified 原算法逐字节一致）
+- 指标层：calc_rsi / calc_sma（委托 pandas-ta 成熟库；2026-10-17 K2 重基线后，
+  P3b 的"与 unified 原算法逐字节一致"契约由库口径取代，基准见这两个测试文件）
 - 执行层：simulate()——signal_fn 驱动的统一资金曲线循环，
   SL/TP 止盈止损、手续费、仓位比例、复利模型全部参数化
 - 评分层：fitness_score()——原两份逐字相同的适应度公式
@@ -30,6 +31,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -44,28 +46,38 @@ class SimResult:
 
 
 def calc_rsi(close: np.ndarray, period: int) -> np.ndarray:
-    """向量化 RSI
+    """RSI（pandas-ta 成熟库，K2 重基线）
 
-    与 strategy/unified_evolve.py:_simulate 原算法逐字节一致：
-    delta = diff(prepend=首值)，增益/损失窗口为 [max(0, i-period+1), i]，
-    早期 bar 使用扩展窗口；avg_loss 为 0 时 rs 取 100。
+    2026-10-17 K2：原实现为 unified 内联的扩展窗口简单均值（Cutler 式，
+    tests 曾逐字节固化）；现委托 pandas-ta 的 rsi（alpha=1/period 的 EWM 口径）。
+    行为差异（刻意重基线，测试黄金值已按 K2 重新固化）：
+    - 数值整体变化（Cutler → pandas-ta EWM-Wilder 口径）；
+    - 全平序列（无涨跌）→ 0/0 = NaN（旧实现返回 99.01；下游信号比较对 NaN
+      恒 False，等价于无信号，不会误触发）；
+    - len < period+1 时整列 NaN（pandas-ta 对数据不足返回 None）。
     """
-    seg = np.asarray(close, dtype=float)
-    m = len(seg)
-    if m == 0:
+    arr = np.asarray(close, dtype=float)
+    if arr.size == 0:
         return np.array([])
-    delta = np.diff(seg, prepend=seg[0])
-    gain = np.where(delta > 0, delta, 0)
-    loss = np.where(delta < 0, -delta, 0)
-    avg_gain = np.array([np.mean(gain[max(0, i - period + 1):i + 1]) for i in range(m)])
-    avg_loss = np.array([np.mean(loss[max(0, i - period + 1):i + 1]) for i in range(m)])
-    rs = np.divide(avg_gain, avg_loss, out=np.ones(m) * 100, where=avg_loss != 0)
-    return 100 - (100 / (1 + rs))
+    result = ta.rsi(pd.Series(arr), length=int(period))
+    if result is None:  # 数据不足 period+1
+        return np.full(arr.size, np.nan)
+    return result.to_numpy()
 
 
 def calc_sma(close: np.ndarray, period: int) -> np.ndarray:
-    """简单移动平均（前 period-1 个 bar 为 NaN，与原实现一致）"""
-    return pd.Series(np.asarray(close, dtype=float)).rolling(period).mean().values
+    """简单移动平均（pandas-ta 成熟库）
+
+    预热 NaN 分布与 pandas rolling 一致；末位 ULP 差异（~1e-12 量级绝对值），
+    K2 起以 pandas-ta 输出为唯一基准。
+    """
+    arr = np.asarray(close, dtype=float)
+    if arr.size == 0:
+        return np.array([])
+    result = ta.sma(pd.Series(arr), length=int(period))
+    if result is None:
+        return np.full(arr.size, np.nan)
+    return result.to_numpy()
 
 
 def _parse_signal(sig, default_frac: float) -> tuple[str, float]:

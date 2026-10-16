@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -98,38 +99,39 @@ class TradingEnvironment(gym.Env if HAS_GYM else object):
         # 收益率
         returns = np.diff(close, prepend=close[0]) / (close + 1e-8)
 
-        # RSI (14)
-        delta = np.diff(close, prepend=close[0])
-        gain = np.where(delta > 0, delta, 0)
-        loss = np.where(delta < 0, -delta, 0)
-        avg_gain = pd.Series(gain).rolling(14).mean().values
-        avg_loss = pd.Series(loss).rolling(14).mean().values
-        rs = np.divide(avg_gain, avg_loss, out=np.ones(n)*100, where=avg_loss!=0)
-        rsi = 100 - (100 / (1 + rs))
+        close_s = pd.Series(close)
 
-        # MACD
-        ema12 = pd.Series(close).ewm(span=12).mean().values
-        ema26 = pd.Series(close).ewm(span=26).mean().values
-        macd = ema12 - ema26
-        macd_signal = pd.Series(macd).ewm(span=9).mean().values
+        # RSI (14)（K2：pandas-ta）
+        rsi_series = ta.rsi(close_s, length=14)
+        rsi = np.full(n, np.nan) if rsi_series is None else rsi_series.to_numpy()
+
+        # MACD（K2：pandas-ta；列序 [MACD, 柱, 信号]）
+        macd_df = ta.macd(close_s)
+        if macd_df is None:
+            macd = np.full(n, np.nan)
+            macd_signal = np.full(n, np.nan)
+        else:
+            macd = macd_df.iloc[:, 0].to_numpy()
+            macd_signal = macd_df.iloc[:, 2].to_numpy()
         macd_hist = macd - macd_signal
 
-        # 布林带
-        sma20 = pd.Series(close).rolling(20).mean().values
-        std20 = pd.Series(close).rolling(20).std().values
-        bb_upper = sma20 + 2 * std20
-        bb_lower = sma20 - 2 * std20
+        # 布林带（K2：pandas-ta；列序 [BBL, BBM, BBU, BBB, BBP]）
+        bb_df = ta.bbands(close_s, length=20, std=2.0)
+        if bb_df is None:
+            bb_upper = np.full(n, np.nan)
+            bb_lower = np.full(n, np.nan)
+        else:
+            bb_upper = bb_df.iloc[:, 2].to_numpy()
+            bb_lower = bb_df.iloc[:, 0].to_numpy()
         bb_position = (close - bb_lower) / (bb_upper - bb_lower + 1e-8)
 
-        # ATR
-        high_low = high - low
-        high_close = np.abs(high - np.roll(close, 1))
-        low_close = np.abs(low - np.roll(close, 1))
-        tr = np.maximum(np.maximum(high_low, high_close), low_close)
-        atr = pd.Series(tr).rolling(14).mean().values
+        # ATR（K2：pandas-ta）
+        atr_series = ta.atr(pd.Series(high), pd.Series(low), close_s, length=14)
+        atr = np.full(n, np.nan) if atr_series is None else atr_series.to_numpy()
 
         # 成交量变化
-        vol_sma = pd.Series(volume).rolling(20).mean().values
+        vol_sma_series = ta.sma(pd.Series(volume), length=20)
+        vol_sma = np.full(n, np.nan) if vol_sma_series is None else vol_sma_series.to_numpy()
         vol_ratio = volume / (vol_sma + 1e-8)
 
         # 价格变化率

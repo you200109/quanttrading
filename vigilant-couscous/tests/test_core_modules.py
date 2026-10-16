@@ -67,6 +67,18 @@ class TestMultiTimeframeAnalyzer:
         # 数据不足时共振分数应较低（不一定为0）
         assert result.resonance_score <= 30.0
 
+    def test_macd_signal_reflects_trend(self):
+        """K2 修复回归：信号线 = MACD 线 9 周期 EMA（原实现信号线恒等 MACD 线
+        → 恒返回 "hold" 的真 bug）；买/卖/平/数据不足四态覆盖"""
+        from agents.multi_timeframe import MultiTimeframeAnalyzer
+        analyzer = MultiTimeframeAnalyzer(_make_sample_data(300), "BTC/USDT")
+        buy_case = np.concatenate([np.linspace(100, 80, 40), np.linspace(80, 130, 40)])
+        sell_case = np.concatenate([np.linspace(80, 120, 40), np.linspace(120, 90, 40)])
+        assert analyzer._calc_macd_signal(buy_case) == "buy"
+        assert analyzer._calc_macd_signal(sell_case) == "sell"
+        assert analyzer._calc_macd_signal(np.full(40, 100.0)) == "hold"   # 全平 → MACD=信号线
+        assert analyzer._calc_macd_signal(np.arange(30.0)) == "hold"      # <34 数据不足
+
 
 class TestBacktestValidator:
     """回测验证器测试"""

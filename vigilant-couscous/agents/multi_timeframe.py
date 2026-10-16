@@ -11,6 +11,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -90,32 +91,35 @@ class MultiTimeframeAnalyzer:
                                support=np.min(recent_low), resistance=np.max(recent_high))
 
     def _calc_rsi(self, prices: np.ndarray, window: int = 14) -> float:
+        """RSI 末值（pandas-ta；数据不足/退化（全平）时回退 50.0）
+
+        K2（2026-10-17）：原实现为手写 Cutler 式窗口均值，现委托 pandas-ta。
+        """
         if len(prices) < window + 1:
             return 50.0
-        deltas = np.diff(prices[-window-1:])
-        gains = np.sum(deltas[deltas > 0]) / window
-        losses = -np.sum(deltas[deltas < 0]) / window
-        if losses == 0:
-            return 100.0
-        return 100.0 - (100.0 / (1.0 + gains / losses))
+        r = ta.rsi(pd.Series(np.asarray(prices, dtype=float)), length=window)
+        if r is None:
+            return 50.0
+        value = r.iloc[-1]
+        return 50.0 if pd.isna(value) else float(value)
 
     def _calc_macd_signal(self, prices: np.ndarray) -> str:
-        if len(prices) < 26:
-            return "hold"
-        ema12 = self._ema(prices, 12)
-        ema26 = self._ema(prices, 26)
-        macd_val = ema12 - ema26
-        sig_val = self._ema(np.full(9, macd_val), 9)
-        return "buy" if macd_val > sig_val else ("sell" if macd_val < sig_val else "hold")
+        """MACD 金叉/死叉信号（pandas-ta）
 
-    def _ema(self, prices: np.ndarray, period: int) -> float:
-        if len(prices) < period:
-            return float(np.mean(prices))
-        alpha = 2 / (period + 1)
-        ema = float(np.mean(prices[:period]))
-        for price in prices[period:]:
-            ema = alpha * float(price) + (1 - alpha) * ema
-        return ema
+        K2 修复：原实现用 np.full(9, macd_val) 的 EMA 当信号线——信号线与
+        MACD 线恒等，恒返回 "hold"（真 bug）。现按标准口径：信号线 = MACD
+        线的 9 周期 EMA。ta.macd 要求 len >= slow + signal - 1（12/26/9 → 34）。
+        """
+        if len(prices) < 34:
+            return "hold"
+        m = ta.macd(pd.Series(np.asarray(prices, dtype=float)), fast=12, slow=26, signal=9)
+        if m is None:
+            return "hold"
+        macd_val, sig_val = m.iloc[-1, 0], m.iloc[-1, 2]
+        if pd.isna(macd_val) or pd.isna(sig_val):
+            return "hold"
+        macd_val, sig_val = float(macd_val), float(sig_val)
+        return "buy" if macd_val > sig_val else ("sell" if macd_val < sig_val else "hold")
 
     def _calculate_resonance(self, signals: dict[int, TimeframeSignal]) -> float:
         if not signals:

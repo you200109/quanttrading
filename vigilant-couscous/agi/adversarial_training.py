@@ -17,6 +17,8 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -184,33 +186,35 @@ class AdversarialTraining:
         return results
 
     def _simulate_performance(self, agent: StrategyAgent, market_data: dict) -> float:
-        """模拟策略表现"""
+        """模拟策略表现（K2：指标一律出自 pandas-ta，禁手写公式）"""
         close = market_data.get('close', [])
         if len(close) < 50:
             return 0.0
 
         returns = np.diff(close[-50:]) / close[-51:-1]
         params = agent.params
+        window = np.asarray(close[-50:], dtype=float)
+        close_s = pd.Series(window)
 
         if agent.category == "trend":
             sma_f = int(params.get('sma_fast', 5))
             sma_s = int(params.get('sma_slow', 20))
-            sma_f_vals = np.convolve(close[-50:], np.ones(sma_f)/sma_f, mode='valid')
-            sma_s_vals = np.convolve(close[-50:], np.ones(sma_s)/sma_s, mode='valid')
-            min_len = min(len(sma_f_vals), len(sma_s_vals))
-            signals = (sma_f_vals[-min_len:] > sma_s_vals[-min_len:]).astype(int)
+            sma_f_vals = ta.sma(close_s, length=sma_f)
+            sma_s_vals = ta.sma(close_s, length=sma_s)
+            if sma_f_vals is None or sma_s_vals is None:
+                return 0.0
+            start = max(sma_f, sma_s) - 1
+            signals = (sma_f_vals.iloc[start:].to_numpy() > sma_s_vals.iloc[start:].to_numpy()).astype(int)
             strategy_returns = signals[:-1] * returns[-len(signals)+1:]
 
         elif agent.category == "momentum":
             rsi_period = int(params.get('rsi_period', 14))
             os_ = params.get('rsi_oversold', 30)
             ob = params.get('rsi_overbought', 70)
-            deltas = np.diff(close[-50:])
-            gains = np.where(deltas > 0, deltas, 0)
-            losses = np.where(deltas < 0, -deltas, 0)
-            avg_gain = np.convolve(gains, np.ones(rsi_period)/rsi_period, mode='full')[:len(gains)]
-            avg_loss = np.convolve(losses, np.ones(rsi_period)/rsi_period, mode='full')[:len(losses)]
-            rsi = 100 - 100 / (1 + avg_gain / (avg_loss + 1e-8))
+            rsi_series = ta.rsi(close_s, length=rsi_period)
+            if rsi_series is None:
+                return 0.0
+            rsi = rsi_series.to_numpy()[1:]  # 与原 len(deltas)=49 对齐（idx0 为 NaN，不产生信号）
             signals = np.zeros(len(rsi))
             signals[rsi < os_] = 1
             signals[rsi > ob] = -1
@@ -219,11 +223,12 @@ class AdversarialTraining:
         else:
             bb_period = int(params.get('bb_period', 20))
             bb_std = params.get('bb_std', 2.0)
-            sma = np.convolve(close[-50:], np.ones(bb_period)/bb_period, mode='valid')
-            std = np.array([np.std(close[-50:][i:i+bb_period]) for i in range(len(close[-50:])-bb_period+1)])
-            upper = sma + bb_std * std
-            lower = sma - bb_std * std
-            prices = close[-len(sma):]
+            bb_df = ta.bbands(close_s, length=bb_period, std=bb_std)
+            if bb_df is None:
+                return 0.0
+            upper = bb_df.iloc[bb_period-1:, 2].to_numpy()
+            lower = bb_df.iloc[bb_period-1:, 0].to_numpy()
+            prices = window[bb_period-1:]
             signals = np.zeros(len(prices))
             signals[prices < lower] = 1
             signals[prices > upper] = -1

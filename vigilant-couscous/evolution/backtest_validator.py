@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -143,10 +144,26 @@ class BacktestValidator:
         entry_price = 0
         trades = []
         equity_curve = [capital]
+        # K2（2026-10-17）：指标改由 pandas-ta 一次性预计算后按 bar 取值。对因果型
+        # 指标（EWM 型 RSI / rolling 型 SMA），整体计算与原先逐 bar 重算数值等价；
+        # SMA 保留原"均值窗口截至前一根 bar"语义（shift(1)）；数据不足时为 NaN，
+        # 比较恒 False（等价于不产生信号）。
+        close_series = pd.Series(np.asarray(close, dtype=float))
+        rsi_series = ta.rsi(close_series, length=int(rsi_period))
+        sma_f_series = ta.sma(close_series, length=int(sma_fast))
+        sma_s_series = ta.sma(close_series, length=int(sma_slow))
+        if rsi_series is None:
+            rsi_series = pd.Series(np.nan, index=close_series.index)
+        if sma_f_series is None:
+            sma_f_series = pd.Series(np.nan, index=close_series.index)
+        if sma_s_series is None:
+            sma_s_series = pd.Series(np.nan, index=close_series.index)
+        sma_f_series = sma_f_series.shift(1)
+        sma_s_series = sma_s_series.shift(1)
         for i in range(max(sma_slow, rsi_period) + 1, len(close)):
-            rsi = self._calc_rsi(close[:i+1], rsi_period)
-            sma_f = np.mean(close[i-sma_fast:i])
-            sma_s = np.mean(close[i-sma_slow:i])
+            rsi = float(rsi_series.iloc[i])
+            sma_f = float(sma_f_series.iloc[i])
+            sma_s = float(sma_s_series.iloc[i])
             price = close[i]
             if position > 0:
                 pnl_pct = (price - entry_price) / entry_price
@@ -168,14 +185,6 @@ class BacktestValidator:
             trades.append({"entry": entry_price, "exit": close[-1],
                            "pnl_pct": (close[-1] - entry_price) / entry_price})
         return self._compute_metrics(trades, equity_curve, close)
-
-    def _calc_rsi(self, prices: np.ndarray, period: int) -> float:
-        if len(prices) < period + 1:
-            return 50.0
-        deltas = np.diff(prices[-period-1:])
-        gains = np.sum(deltas[deltas > 0]) / period
-        losses = -np.sum(deltas[deltas < 0]) / period
-        return 100.0 - (100.0 / (1.0 + gains / (losses + 1e-8)))
 
     def _compute_metrics(self, trades: list[dict], equity: list[float], close: np.ndarray) -> BacktestResult:
         n = len(trades)

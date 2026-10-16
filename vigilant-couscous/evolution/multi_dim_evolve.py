@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 logger = logging.getLogger(__name__)
 
@@ -225,10 +226,15 @@ class MultiDimEvolution:
         sl = params.get('stop_loss', 0.05)
         tp = params.get('take_profit', 0.15)
         size = params.get('position_size', 0.2)
-        ema_f = pd.Series(close).ewm(span=fast).mean().values
-        ema_s = pd.Series(close).ewm(span=slow).mean().values
-        macd = ema_f - ema_s
-        signal = pd.Series(macd).ewm(span=sig).mean().values
+        # K2（2026-10-17）：MACD 出自 pandas-ta（列序 [MACD, 柱, 信号]）；
+        # 数据不足（len < slow+sig-1）时为全 NaN → 交叉条件恒假（不交易）
+        macd_df = ta.macd(pd.Series(close), fast=fast, slow=slow, signal=sig)
+        if macd_df is None:
+            macd = np.full(n, np.nan)
+            signal = np.full(n, np.nan)
+        else:
+            macd = macd_df.iloc[:, 0].to_numpy()
+            signal = macd_df.iloc[:, 2].to_numpy()
         return self._run_sim(close, n, max(fast, slow, sig), lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if macd[i] > signal[i] and macd[i-1] <= signal[i-1] else
             ('sell' if macd[i] < signal[i] and macd[i-1] >= signal[i-1] else 'hold'), sl, tp, size)
@@ -239,10 +245,15 @@ class MultiDimEvolution:
         sl = params.get('stop_loss', 0.05)
         tp = params.get('take_profit', 0.15)
         size = params.get('position_size', 0.2)
-        sma = pd.Series(close).rolling(period).mean().values
-        std = pd.Series(close).rolling(period).std().values
-        upper = sma + std_mul * std
-        lower = sma - std_mul * std
+        # K2（2026-10-17）：布林带出自 pandas-ta（列序 [BBL, BBM, BBU, BBB, BBP]）；
+        # 数据不足（len < period）时为全 NaN → 突破条件恒假（不交易）
+        bb_df = ta.bbands(pd.Series(close), length=period, std=std_mul)
+        if bb_df is None:
+            lower = np.full(n, np.nan)
+            upper = np.full(n, np.nan)
+        else:
+            lower = bb_df.iloc[:, 0].to_numpy()
+            upper = bb_df.iloc[:, 2].to_numpy()
         return self._run_sim(close, n, period, lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if close[i] < lower[i] else ('sell' if close[i] > upper[i] else 'hold'), sl, tp, size)
 
@@ -280,7 +291,9 @@ class MultiDimEvolution:
         sl = params.get('stop_loss', 0.05)
         tp = params.get('take_profit', 0.15)
         size = params.get('position_size', 0.2)
-        vol_ma = pd.Series(volume).rolling(vol_period).mean().values
+        # K2（2026-10-17）：成交量均线出自 pandas-ta（预热 NaN 与原 rolling 一致）
+        vol_ma_series = ta.sma(pd.Series(volume), length=vol_period)
+        vol_ma = np.full(n, np.nan) if vol_ma_series is None else vol_ma_series.to_numpy()
         price_chg = pd.Series(close).pct_change().values
         return self._run_sim(close, n, vol_period, lambda i, rsi, sma_f, sma_s, vol, _pos:
             'buy' if volume[i] > vol_ma[i] * vol_mult and price_chg[i] > price_th else

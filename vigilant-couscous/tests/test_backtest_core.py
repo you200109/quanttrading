@@ -1,13 +1,14 @@
 """
-backtest_core 统一回测内核单元测试（P3b）
+backtest_core 统一回测内核单元测试（P3b；K2 指标重基线 2026-10-17）
 
 覆盖：
-1. 指标层：calc_rsi / calc_sma 与原 unified_evolve 内联算法逐字节一致
+1. 指标层：calc_rsi / calc_sma 直通 pandas-ta（K2 起以库口径为基准；
+   原"与 unified 内联逐字节一致"断言随重基线退场）
 2. 执行层：simulate 的信号协议（hold/buy/sell/('buy', frac)）、
    SL/TP 优先于信号、position 互斥分流、手续费、收盘强平
 3. 评分层：fitness_score 公式不变量
 4. 合并等价性：multi_dim/unified 经内核的输出与黄金快照一致
-5. P3b 意图修复：rsi_reversal / sma_cross 模板新黄金值
+5. 意图修复：rsi_reversal / sma_cross 模板黄金值（K2 口径重固化）
 """
 import sys
 from pathlib import Path
@@ -28,36 +29,38 @@ from test_backtest_baseline import (  # noqa: E402
 
 
 class TestCalcRsi:
-    """calc_rsi 与原 unified_evolve._simulate 内联算法一致"""
+    """calc_rsi 直通 pandas-ta（K2 起为库口径基准）"""
 
-    def test_matches_inline_implementation(self):
+    def test_matches_pandas_ta_directly(self):
+        import pandas_ta as ta
         close = make_random_data(120)['close'].values
         for period in (7, 14, 30):
-            seg = close
-            delta = np.diff(seg, prepend=seg[0])
-            gain = np.where(delta > 0, delta, 0)
-            loss = np.where(delta < 0, -delta, 0)
-            avg_gain = np.array([np.mean(gain[max(0, i - period + 1):i + 1]) for i in range(len(seg))])
-            avg_loss = np.array([np.mean(loss[max(0, i - period + 1):i + 1]) for i in range(len(seg))])
-            rs = np.divide(avg_gain, avg_loss, out=np.ones(len(seg)) * 100, where=avg_loss != 0)
-            expected = 100 - (100 / (1 + rs))
-            got = backtest_core.calc_rsi(seg, period)
-            assert np.array_equal(expected, got), f"period={period} RSI 不一致"
+            expected = ta.rsi(pd.Series(close), length=period).to_numpy()
+            got = backtest_core.calc_rsi(close, period)
+            assert np.array_equal(expected, got, equal_nan=True), \
+                f"period={period} RSI 与 pandas-ta 不一致"
 
-    def test_empty_and_flat(self):
+    def test_empty_short_and_flat(self):
         assert len(backtest_core.calc_rsi(np.array([]), 14)) == 0
-        flat = np.full(50, 100.0)
-        # 无涨跌：avg_gain=avg_loss=0 → rs=100 → rsi≈99.01（与原实现一致）
-        assert backtest_core.calc_rsi(flat, 14)[-1] == pytest.approx(99.00990099009901)
+        # K2：len < period+1 时 pandas-ta 无输出 → 整列 NaN（旧实现任意长度都有值）
+        short = backtest_core.calc_rsi(np.full(10, 100.0), 14)
+        assert len(short) == 10 and np.isnan(short).all()
+        # K2：全平序列 0/0 → NaN（旧实现 99.0099…；下游信号比较对 NaN 恒 False
+        # → 等价"无信号"，不会误触发交易）
+        assert np.isnan(backtest_core.calc_rsi(np.full(50, 100.0), 14)[-1])
+        # 单边上涨 → 100
+        assert backtest_core.calc_rsi(np.linspace(100.0, 159.0, 60), 14)[-1] == pytest.approx(100.0)
 
 
 class TestCalcSma:
-    def test_matches_pandas_rolling(self):
+    def test_matches_pandas_ta(self):
+        import pandas_ta as ta
         close = make_random_data(80)['close'].values
         for period in (3, 5, 20):
-            expected = pd.Series(close).rolling(period).mean().values
+            expected = ta.sma(pd.Series(close), length=period).to_numpy()
             got = backtest_core.calc_sma(close, period)
-            assert np.array_equal(expected, got, equal_nan=True)
+            # ta.sma 底层为 pandas rolling 均值；浮点求和顺序差异仅 ULP 级
+            assert np.allclose(expected, got, equal_nan=True, rtol=1e-12, atol=1e-12)
 
     def test_warmup_nan(self):
         got = backtest_core.calc_sma(np.arange(10, dtype=float), 3)
@@ -222,10 +225,13 @@ class TestKernelEquivalence:
         assert fitness(gene) == pytest.approx(expected, rel=1e-12)
 
 
-# P3b 意图修复后的新黄金值（原退化值：rsi_reversal 0.328/0.449、sma_cross 0.01/0.01）
+# 意图修复后的黄金值。演进：P3b 前退化 0.328/0.449（rsi）、0.01/0.01（sma）→
+# P3b 修复 0.586/0.709（rsi）、0.523/0.255（sma）→ K2（2026-10-17）按 pandas-ta
+# 口径重固化：rsi_reversal 随机数据 0.456；振荡数据降为 0.01（EWM 口径在该数据
+# 仅 1 次穿越 → _run_sim 的 <3 笔回退 0.01）；sma_cross 逐位不变。
 MD_FIXED_GOLDEN = {
-    "random": {"rsi_reversal": 0.5858220899993972, "sma_cross": 0.5230769663084993},
-    "oscillating": {"rsi_reversal": 0.7086015970638209, "sma_cross": 0.25478294723813977},
+    "random": {"rsi_reversal": 0.45580953981848127, "sma_cross": 0.5230769663084993},
+    "oscillating": {"rsi_reversal": 0.01, "sma_cross": 0.25478294723813977},
 }
 
 
@@ -243,19 +249,25 @@ class TestIntentionalFixes:
         gene = StrategyGene(id=f"md_{template}", params=dict(MD_PARAMS))
         assert ff(gene) == pytest.approx(MD_FIXED_GOLDEN[dataset][template], rel=1e-9)
 
-    def test_rsi_template_trades_more_than_degenerate(self):
-        """修复后 rsi_reversal 应产生多笔交易（原退化为单笔持有）"""
-        from evolution.multi_dim_evolve import MultiDimEvolution
+    def test_rsi_template_uses_real_indicator_arrays(self):
+        """修复语义验证：真实 RSI 数组的行为必须不同于全零退化数组。
+
+        K2 注：新库 EWM 口径下 30/70 阈值仅 1 次穿越，改用 45/55 保持区分度；
+        全零数组在 45/55 下恒满足买入条件（0<45），与真实数组交易数不同
+        （22 vs 36），可判别 P3b 修复是否回潮。
+        """
         data = make_oscillating_data()
-        eng = MultiDimEvolution()
         close = data['close'].values
         rsi = backtest_core.calc_rsi(close, 14)
 
         def sig(i, rsi_arr, sf, ss, vol, position):
-            return 'buy' if rsi_arr[i] < 30 else ('sell' if rsi_arr[i] > 70 else 'hold')
+            return 'buy' if rsi_arr[i] < 45 else ('sell' if rsi_arr[i] > 55 else 'hold')
 
-        res = backtest_core.simulate(close, 14, sig, 0.05, 0.15, 0.2, rsi=rsi)
-        assert len(res.trades) >= 3
+        res_real = backtest_core.simulate(close, 14, sig, 0.05, 0.15, 0.2, rsi=rsi)
+        res_zero = backtest_core.simulate(close, 14, sig, 0.05, 0.15, 0.2,
+                                          rsi=np.zeros(len(close)))
+        assert len(res_real.trades) >= 3
+        assert len(res_real.trades) != len(res_zero.trades)
 
     def test_sma_cross_template_actually_trades(self):
         """修复后 sma_cross 应产生交易（原恒返回 0.01）"""
