@@ -96,6 +96,7 @@ ALERT_SPEC: dict[str, tuple] = {
 ANALYSIS_SPEC: dict[str, tuple] = {
     "clone_depth": _t(int),
     "max_files_scanned": _t(int),
+    "max_projects_per_run": _t(int),
     "include_extensions": _t(list),
     "never_execute": _t(bool),
 }

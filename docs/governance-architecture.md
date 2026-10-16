@@ -83,7 +83,7 @@
 | ② | `score.py` | 发现后同 job | discovery → `reports/<date>/shortlist.json` | 7 维加权、A/B/C 分层、白名单直通、黑名单剔除 | ✅ P6c |
 | ③ | `monitor.py` | 每日 | watched + 项目卡 → `reports/metrics/` + Issue | 版本 / release 跟踪、依赖健康、CI 阈值、告警去重/防洪落地 | ✅ P6d |
 | ④ | `metrics.py` | 每日 + CI 后 | Actions API → `reports/quality/` | 自查 CI 成功率 / 时长 / 覆盖率趋势 | ✅ P5d |
-| ⑤ | `analyze.py` | A/B 级项目 | 浅克隆 → `memory/knowledge/projects/*.json` | 只读静态分析、项目卡、学习笔记 | 🔜 P6e |
+| ⑤ | `analyze.py` | A/B 级项目 | 浅克隆 → `memory/knowledge/projects/*.json` | 只读静态分析（依赖/AST API 面/质量信号/学习笔记），绝不执行候选代码 | ✅ P6e |
 | ⑥ | `integrate.py` | 每周 / 人工批准 | 项目卡 + 提案 → 分支 + PR | 依赖升级 / 适配器 / 特性移植，白名单制自动 PR | 🔜 P7 |
 | ⑦ | `evolve.py` | 每 6 小时 | 决策轨迹 → 提案 + 复盘报告 | meta-evolve v2：反省 → 排序 → 行动 → 验证 | 🔜 P7 |
 
@@ -98,7 +98,7 @@
 | 契约 | 一句话 | 关键字段 |
 | --- | --- | --- |
 | `candidate` | 发现候选 | full_name / stars / forks / open_issues / license / language / pushed_at / archived / topics |
-| `project_card` | 长期项目档案 | status(discovered→analyzed→tracked→integrated/rejected) / quality / analysis / integration |
+| `project_card` | 长期项目档案 | name / status(discovered→analyzed→approved→integrated/rejected/dropped) / tier / deps / api_surface / quality / reason |
 | `metric_record` | 单次度量 | kind / value / unit / source（CI 或本地） |
 | `decision_record` | 决策轨迹 | topic / hypothesis / action / outcome(pending/merged/rejected/ci_failed/superseded) / evidence |
 

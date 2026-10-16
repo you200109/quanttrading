@@ -92,6 +92,7 @@ monitoring:
 analysis:
   clone_depth: 1
   max_files_scanned: 400
+  max_projects_per_run: 3        # 克隆是重操作：单轮最多分析 3 个新项目（其余显式跳过，留给下一轮）
   include_extensions:
     - '.py'
   never_execute: true            # 明确的安全边界标记（analyze.py 启动时复核）
