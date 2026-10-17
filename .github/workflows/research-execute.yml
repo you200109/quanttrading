@@ -1,0 +1,38 @@
+name: research-execute
+on:
+  schedule:
+    - cron: "20 16 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: execute
+  cancel-in-progress: false
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PAGES_URL: https://you200109.github.io/quanttrading
+      TIMEFRAME: "1d"
+      BARS: "600"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: research/requirements.txt
+      - run: pip install -r research/requirements.txt
+      - run: python research/execute.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          KILL_SWITCH: ${{ vars.KILL_SWITCH }}
+          APPROVED_PARAMS: ${{ vars.APPROVED_PARAMS }}
+          EXECUTE: ${{ vars.EXECUTE }}
+          MAX_USDT: ${{ vars.MAX_USDT }}
+          OKX_DEMO_KEY: ${{ secrets.OKX_DEMO_KEY }}
+          OKX_DEMO_SECRET: ${{ secrets.OKX_DEMO_SECRET }}
+          OKX_DEMO_PASSPHRASE: ${{ secrets.OKX_DEMO_PASSPHRASE }}
