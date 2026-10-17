@@ -2,3 +2,5 @@ ccxt>=4.3
 numpy<2
 pandas>=1.5,<2.2
 vectorbt>=0.26.2,<0.29
+# vectorbt 0.27 模板依旧用已废弃的 scattermapbox（plotly 6 删除）——钉 5.x
+plotly<6
