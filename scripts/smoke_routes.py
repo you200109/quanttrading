@@ -10,9 +10,11 @@
 4. 本地 vc 端点可用：/api/vc/strategies、/api/vc/memory/nexus
 5. nexus 文件端点安全拒绝路径遍历（../../etc/passwd → 非 200）
 6. 全量路由清点：openapi.json 的 paths 数与 app.routes 一致
-7. 任何探测不出现 5xx
+7. 执行端点门禁：/api/order、/api/order/cancel 已注册；POST 无 key → 401；
+   错 key → 401；带 key + 非法体 → 422（Pydantic 拦在 handler 前，绝不触 OKX 网络）
+8. 任何探测不出现 5xx
 
-只打不依赖外部 IO（OKX/网络）的端点；交易类端点不在冒烟范围（P4 覆盖）。
+只打不依赖外部 IO（OKX/网络）的端点；执行端点只验其注册与门禁层。
 用法：python scripts/smoke_routes.py
 """
 
@@ -50,6 +52,18 @@ def http_get(path, headers=None, timeout=10):
         return -1, f'{type(e).__name__}: {e}'
 
 
+def http_post(path, headers=None, payload=None, timeout=10):
+    data = json.dumps(payload if payload is not None else {}).encode('utf-8')
+    req = urllib.request.Request(BASE + path, data=data, headers=headers or {}, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, resp.read().decode('utf-8', 'replace')
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode('utf-8', 'replace')
+    except Exception as e:
+        return -1, f'{type(e).__name__}: {e}'
+
+
 def wait_ready(deadline_s=30):
     t0 = time.time()
     while time.time() - t0 < deadline_s:
@@ -69,9 +83,13 @@ def start_server(with_key):
     else:
         env.pop('API_AUTH_KEY', None)
     creation = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    # 服务输出落盘（不用 PIPE：Windows 上 uvicorn+PIPE 有背压坑，且便于事后诊断）
+    out_path = REPO_ROOT / 'reports' / f'smoke_server_{PORT}.log'
+    out_path.parent.mkdir(exist_ok=True)
+    out_file = open(out_path, 'w', encoding='utf-8')
     return subprocess.Popen(
         [sys.executable, '-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', str(PORT)],
-        cwd=str(REPO_ROOT), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=creation,
+        cwd=str(REPO_ROOT), env=env, stdout=out_file, stderr=subprocess.STDOUT, creationflags=creation,
     )
 
 
@@ -80,7 +98,8 @@ def main():
     proc = start_server(with_key=True)
     try:
         if not wait_ready():
-            out = proc.stdout.read().decode('utf-8', 'replace')[-2000:] if proc.stdout else ''
+            out_path = REPO_ROOT / 'reports' / f'smoke_server_{PORT}.log'
+            out = out_path.read_text(encoding='utf-8', errors='replace')[-2000:] if out_path.exists() else ''
             check('service starts and /health ready', False, f'output tail: {out}')
             return 1
         check('service starts and /health ready', True)
@@ -102,6 +121,26 @@ def main():
         check('GET /openapi.json returns 200', status == 200, f'status={status}')
         total_ops = sum(len(v) for v in paths.values())
         check('openapi paths >= 30', len(paths) >= 30, f'paths={len(paths)} operations={total_ops}')
+        check('openapi has /api/order and /api/order/cancel',
+              '/api/order' in paths and '/api/order/cancel' in paths,
+              f"order={'/api/order' in paths} cancel={'/api/order/cancel' in paths}")
+
+        # 执行端点门禁（不触网络：401 在 handler 前，422 在 handler 前由 Pydantic 拒绝）
+        status, _ = http_post('/api/order', payload={})
+        check('POST /api/order without key -> 401', status == 401, f'status={status}')
+
+        status, _ = http_post('/api/order', headers={'X-API-Key': 'wrong-key'}, payload={})
+        check('POST /api/order with wrong key -> 401', status == 401, f'status={status}')
+
+        status, body = http_post('/api/order', headers={'X-API-Key': KEY},
+                                 payload={'inst_id': "x';evil--"})
+        check('POST /api/order with key + invalid body -> 422', status == 422,
+              f'status={status} body={body[:60]}')
+
+        status, body = http_post('/api/order/cancel', headers={'X-API-Key': KEY},
+                                 payload={'inst_id': "x';evil--", 'ord_id': '1'})
+        check('POST /api/order/cancel with key + invalid body -> 422', status == 422,
+              f'status={status}')
 
         # 认证矩阵（受保护端点 /api/vc/strategies）
         status, body = http_get('/api/vc/strategies')

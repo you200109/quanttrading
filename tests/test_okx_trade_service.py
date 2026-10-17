@@ -60,7 +60,7 @@ class FakeOkxSync:
 @pytest.fixture()
 def svc(monkeypatch):
     monkeypatch.setattr(trade_mod, 'OkxSync', FakeOkxSync)
-    monkeypatch.setattr(trade_mod, '_trade_service', None)
+    monkeypatch.setattr(trade_mod, '_trade_services', {})
     monkeypatch.setenv('OKX_API_KEY', 'k-123')
     monkeypatch.setenv('OKX_SECRET_KEY', 's-456')
     monkeypatch.setenv('OKX_PASSPHRASE', 'p-789')
@@ -259,15 +259,40 @@ def test_cancel_order_maps_params_and_recovers(svc):
     assert svc.cancel_order('BTC-USDT', '7')['code'] == '51603'
 
 
-# ==================== 单例工厂 ====================
+# ==================== 按模式缓存工厂 ====================
 
-def test_get_trade_service_singleton(monkeypatch):
+def test_get_trade_service_same_mode_singleton(monkeypatch):
+    """同一模式复用同一实例（SDK sandbox 头构造期绑定，不可热切换）。"""
     monkeypatch.setattr(trade_mod, 'OkxSync', FakeOkxSync)
-    monkeypatch.setattr(trade_mod, '_trade_service', None)
-    first = trade_mod.get_trade_service()
-    second = trade_mod.get_trade_service()
+    monkeypatch.setattr(trade_mod, '_trade_services', {})
+    first = trade_mod.get_trade_service(simulated=True)
+    second = trade_mod.get_trade_service(simulated=True)
     assert first is second
     assert isinstance(first, trade_mod.OKXTradeService)
+
+
+def test_get_trade_service_modes_are_separate(monkeypatch):
+    """模拟盘/实盘返回不同实例，且互不污染缓存桶。"""
+    monkeypatch.setattr(trade_mod, 'OkxSync', FakeOkxSync)
+    monkeypatch.setattr(trade_mod, '_trade_services', {})
+    demo = trade_mod.get_trade_service(simulated=True)
+    live = trade_mod.get_trade_service(simulated=False)
+    assert demo is not live
+    assert trade_mod.get_trade_service(simulated=True) is demo
+    assert trade_mod.get_trade_service(simulated=False) is live
+    assert demo.simulated is True
+    assert live.simulated is False
+    assert trade_mod.get_trade_service(simulated=True).client.headers.get('x-simulated-trading') == '1'
+    assert 'x-simulated-trading' not in trade_mod.get_trade_service(simulated=False).client.headers
+
+
+def test_get_trade_service_none_follows_env(monkeypatch):
+    monkeypatch.setattr(trade_mod, 'OkxSync', FakeOkxSync)
+    monkeypatch.setattr(trade_mod, '_trade_services', {})
+    monkeypatch.setenv('OKX_SIMULATED', '0')
+    assert trade_mod.get_trade_service().simulated is False
+    monkeypatch.setenv('OKX_SIMULATED', '1')
+    assert trade_mod.get_trade_service().simulated is True
 
 
 # ==================== 真 SDK 配置键名锁定（零网络） ====================

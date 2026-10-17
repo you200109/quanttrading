@@ -1,7 +1,7 @@
 """
 API 端点契约测试（P4b）
 
-以 openapi schema 为路由清单权威来源（38 ops），按"是否依赖外部 IO"
+以 openapi schema 为路由清单权威来源（40 ops），按"是否依赖外部 IO"
 分三类验证，保证 CI 内确定性、无网络、无副作用：
 
 1. 本地端点（LOCAL_*）：完整行为契约
@@ -85,6 +85,8 @@ PYDANTIC_POST = [
     ('/api/vc/backtest/vc', True),
     ('/api/backtest', True),
     ('/api/indicators/calculate', False),
+    ('/api/order', True),
+    ('/api/order/cancel', True),
 ]
 
 # ---- body:dict POST（真实副作用）：只验无 key → 401 ----
@@ -219,6 +221,6 @@ class TestInventoryCompleteness:
             f'表中多余: {sorted(covered - expected)}')
 
     def test_total_route_count_stable(self, openapi_paths):
-        """路由总量锁定 38——新增/删除路由必须显式更新契约表"""
-        assert len(openapi_paths) == 38, (
+        """路由总量锁定 40——新增/删除路由必须显式更新契约表"""
+        assert len(openapi_paths) == 40, (
             f'路由数变为 {len(openapi_paths)}，请更新契约分类表')

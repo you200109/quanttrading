@@ -5,17 +5,24 @@ FastAPI 后端路由
 - 指标接口: 指标列表、指标计算
 - WebSocket: 实时数据推送
 """
+import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from typing import Optional
 
 from backend.core.okx_data_service import get_data_service
 from backend.core.okx_trade_service import get_trade_service
+from backend.core.trade_gate import pre_trade_check
+from okx.ccxt.base.errors import NetworkError  # noqa: F401  随 okx-exchange 一同换血，契约见 okx_trade_service
 from backend.indicators.indicator_engine import get_indicator_engine
 from backend.core.backtest_engine import get_backtest_engine
 from backend.core.frame_utils import candles_to_frame
-from backend.api.models import BacktestRequest, IndicatorCalcRequest
+from backend.api.models import BacktestRequest, CancelOrderRequest, IndicatorCalcRequest, OrderRequest
 
 router = APIRouter()
+
+# 下单/撤单审计日志（专用 logger，便于 grep；密钥与普通参数分开，绝不打印凭据）
+audit_logger = logging.getLogger('OrderAudit')
 
 
 # ==================== 行情接口 ====================
@@ -140,6 +147,68 @@ async def get_account_positions(inst_type: Optional[str] = None):
     svc = get_trade_service()
     data = svc.get_account_position(inst_type)
     return {'code': 0, 'data': data}
+
+
+# ==================== 交易执行（下单 / 撤单） ====================
+# 安全链：X-API-Key 认证（中间件）→ Pydantic 422 → 实盘 confirm_live 显式确认
+#        → 前置风控闸（trade_gate）→ okx-exchange SDK（模拟盘默认）→ 审计日志
+# 差异化失败语义（不静默降级）：
+#        实盘未确认 / 风控拒绝 → HTTP 403；业务拒单 → 200 信封 code=1；传输层错误 → HTTP 502
+
+@router.post('/api/order')
+async def place_order(body: OrderRequest):
+    """下单（默认模拟盘；实盘需 confirm_live=true，且被前置风控闸检查）"""
+    if not body.simulated and not body.confirm_live:
+        audit_logger.warning('ORDER/PLACE rejected (live not confirmed) inst_id=%s side=%s',
+                             body.inst_id, body.side)
+        return JSONResponse(status_code=403, content={
+            'code': 1, 'msg': '实盘下单被拒：confirm_live=false（必须显式确认实盘）'})
+
+    approved, reason = pre_trade_check(body.inst_id, body.side, body.sz, simulated=body.simulated)
+    if not approved:
+        audit_logger.warning('ORDER/PLACE rejected (risk gate) inst_id=%s side=%s: %s',
+                             body.inst_id, body.side, reason)
+        return JSONResponse(status_code=403, content={'code': 1, 'msg': f'风控拒绝下单: {reason}'})
+
+    audit_logger.info(
+        'ORDER/PLACE simulated=%s inst_id=%s side=%s ord_type=%s sz=%s px=%s td_mode=%s',
+        body.simulated, body.inst_id, body.side, body.ord_type, body.sz, body.px, body.td_mode)
+    svc = get_trade_service(body.simulated)
+    try:
+        resp = svc.place_order(body.inst_id, body.side, body.ord_type, body.sz,
+                               px=body.px, td_mode=body.td_mode)
+    except NetworkError as exc:
+        audit_logger.warning('ORDER/PLACE network error: %s', type(exc).__name__)
+        return JSONResponse(status_code=502, content={
+            'code': 1, 'msg': f'OKX 网络错误: {type(exc).__name__}'})
+    if isinstance(resp, dict) and resp.get('code') == '0':
+        audit_logger.info('ORDER/PLACE accepted: %s', resp.get('data'))
+        return {'code': 0, 'msg': '下单成功', 'data': resp.get('data', [])}
+    code = resp.get('code') if isinstance(resp, dict) else '1'
+    msg = resp.get('msg') if isinstance(resp, dict) else str(resp)
+    audit_logger.warning('ORDER/PLACE rejected by OKX: code=%s msg=%s', code, msg)
+    return {'code': 1, 'msg': f'OKX 拒单: {msg}', 'data': resp if isinstance(resp, dict) else None}
+
+
+@router.post('/api/order/cancel')
+async def cancel_order(body: CancelOrderRequest):
+    """撤单（默认模拟盘）"""
+    audit_logger.info('ORDER/CANCEL simulated=%s inst_id=%s ord_id=%s',
+                      body.simulated, body.inst_id, body.ord_id)
+    svc = get_trade_service(body.simulated)
+    try:
+        resp = svc.cancel_order(body.inst_id, body.ord_id)
+    except NetworkError as exc:
+        audit_logger.warning('ORDER/CANCEL network error: %s', type(exc).__name__)
+        return JSONResponse(status_code=502, content={
+            'code': 1, 'msg': f'OKX 网络错误: {type(exc).__name__}'})
+    if isinstance(resp, dict) and resp.get('code') == '0':
+        audit_logger.info('ORDER/CANCEL accepted: %s', resp.get('data'))
+        return {'code': 0, 'msg': '撤单请求已提交', 'data': resp.get('data', [])}
+    code = resp.get('code') if isinstance(resp, dict) else '1'
+    msg = resp.get('msg') if isinstance(resp, dict) else str(resp)
+    audit_logger.warning('ORDER/CANCEL rejected by OKX: code=%s msg=%s', code, msg)
+    return {'code': 1, 'msg': f'OKX 撤单失败: {msg}', 'data': resp if isinstance(resp, dict) else None}
 
 
 # ==================== 指标接口 ====================

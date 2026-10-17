@@ -14,13 +14,18 @@
         .ws-status { font-size: 12px; color: #888; }
         .ws-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #555; margin-right: 4px; }
         .ws-dot.connected { background: #00e676; }
+        .key-input { background: #0d1421; border: 1px solid #2a3a5a; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 12px; width: 190px; }
+        .key-input::placeholder { color: #556; }
         .mode-btn { padding: 6px 16px; border: 1px solid #2a3a5a; background: transparent; color: #888; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .mode-btn.active { background: #1a5fb4; color: #fff; border-color: #1a5fb4; }
+        .mode-btn.live-active { background: #b43a4a; color: #fff; border-color: #b43a4a; }
         .container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 16px; }
         .card { background: #111827; border: 1px solid #1e2a4a; border-radius: 8px; padding: 16px; }
         .card h2 { font-size: 14px; color: #00d4ff; margin-bottom: 12px; }
+        .card h2 .h2-sub { font-size: 12px; color: #888; font-weight: normal; margin-left: 8px; }
         .card.full-width { grid-column: 1 / -1; }
         .card.two-thirds { grid-column: 1 / 3; }
+        .err { color: #ff5252; }
         .ticker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
         .ticker-item { background: #0d1421; padding: 12px; border-radius: 6px; text-align: center; }
         .ticker-item .symbol { font-size: 13px; color: #888; }
@@ -34,23 +39,27 @@
         .btn { background: #1a5fb4; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px; }
         .btn:hover { background: #2a6fc4; }
         .btn.secondary { background: #2a3a5a; }
+        .btn.danger { background: #b43a4a; }
+        .btn.danger:hover { background: #c44a5a; }
         .result-box { background: #0d1421; border: 1px solid #1e2a4a; border-radius: 6px; padding: 10px; margin-top: 8px; font-size: 12px; max-height: 180px; overflow-y: auto; }
-        .ob-table { width: 100%; font-size: 12px; }
+        .trade-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+        .ob-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .ob-table th { text-align: left; color: #888; font-weight: normal; padding: 4px 8px; border-bottom: 1px solid #1e2a4a; }
         .ob-table td { padding: 3px 8px; }
         .ind-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
         .ind-item { background: #0d1421; padding: 8px; border-radius: 4px; text-align: center; }
         .ind-item .name { font-size: 11px; color: #888; }
         .ind-item .val { font-size: 16px; font-weight: bold; color: #00d4ff; }
-        .tab-bar { display: flex; gap: 4px; margin-bottom: 12px; }
-        .tab { padding: 6px 16px; background: #0d1421; border: 1px solid #2a3a5a; color: #888; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 13px; }
-        .tab.active { background: #1a5fb4; color: #fff; border-color: #1a5fb4; }
+        .push-line { border-bottom: 1px dashed #1e2a4a; padding: 2px 0; word-break: break-all; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>QuantTrading</h1>
         <div class="header-right">
-            <span class="ws-status"><span class="ws-dot" id="wsDot"></span><span id="wsText">未连接</span></span>
+            <span class="ws-status"><span class="ws-dot" id="wsDot"></span><span id="wsText">行情WS未连接</span></span>
+            <span class="ws-status"><span class="ws-dot" id="wsTradeDot"></span><span id="wsTradeText">私有WS未连接</span></span>
+            <input type="password" id="apiKeyInput" class="key-input" placeholder="API Key（自动本机保存）" oninput="saveKey()">
             <button class="mode-btn active" id="demoBtn" onclick="switchMode('demo')">模拟盘</button>
             <button class="mode-btn" id="liveBtn" onclick="switchMode('live')">实盘</button>
         </div>
@@ -59,6 +68,48 @@
         <div class="card full-width">
             <h2>实时行情</h2>
             <div class="ticker-grid" id="tickerGrid"><div class="ticker-item"><div class="symbol">加载中</div></div></div>
+        </div>
+        <div class="card full-width">
+            <h2>交易面板<span class="h2-sub" id="tradeModeLabel">模拟盘</span></h2>
+            <div class="trade-grid">
+                <div>
+                    <div class="form-row">
+                        <label>交易对</label>
+                        <select id="tradeSymbol"><option>BTC-USDT</option><option>ETH-USDT</option><option>SOL-USDT</option></select>
+                        <label>方向</label>
+                        <select id="orderSide"><option value="buy">买入</option><option value="sell">卖出</option></select>
+                    </div>
+                    <div class="form-row">
+                        <label>类型</label>
+                        <select id="orderType" style="max-width:120px" onchange="togglePx()">
+                            <option value="limit">限价 limit</option><option value="market">市价 market</option>
+                            <option value="post_only">post_only</option><option value="fok">fok</option><option value="ioc">ioc</option>
+                        </select>
+                        <label>价格</label>
+                        <input type="text" id="orderPx" placeholder="limit 类型必填" style="max-width:110px">
+                        <label>数量</label>
+                        <input type="text" id="orderSz" placeholder="0.01" style="max-width:90px">
+                    </div>
+                    <div class="form-row">
+                        <label>tdMode</label>
+                        <select id="tdMode" style="max-width:120px"><option value="cash">cash</option><option value="cross">cross</option><option value="isolated">isolated</option></select>
+                    </div>
+                    <div class="form-row" id="liveConfirmRow" style="display:none">
+                        <label>实盘确认</label>
+                        <span style="font-size:13px;display:flex;align-items:center;gap:6px">
+                            <input type="checkbox" id="liveConfirm"> 我确认这是一笔<b class="down">实盘</b>下单
+                        </span>
+                    </div>
+                    <button class="btn" id="placeOrderBtn" onclick="placeOrder()">下单（模拟盘）</button>
+                    <button class="btn secondary" onclick="loadPending()">刷新挂单</button>
+                    <div class="result-box" id="orderResult">等待操作</div>
+                    <div class="result-box" id="tradePushResult" style="max-height:130px">私有WS推送（订单/账户流水）</div>
+                </div>
+                <div>
+                    <div class="form-row"><label>当前挂单</label><span style="font-size:12px;color:#888">/orders/pending</span></div>
+                    <div class="result-box" id="pendingResult" style="max-height:420px">等待加载</div>
+                </div>
+            </div>
         </div>
         <div class="card two-thirds">
             <h2>K线图表</h2>
@@ -74,6 +125,11 @@
         <div class="card">
             <h2>盘口深度</h2>
             <table class="ob-table" id="orderbookTable"><tr><td>加载中</td></tr></table>
+        </div>
+        <div class="card">
+            <h2>账户概况<span class="h2-sub" id="accountModeLabel">模拟盘</span></h2>
+            <button class="btn secondary" onclick="loadAccount()">刷新账户</button>
+            <div class="result-box" id="accountResult" style="max-height:220px">等待加载</div>
         </div>
         <div class="card">
             <h2>指标计算</h2>
@@ -121,14 +177,52 @@
     <script>
         let klineChart = null;
         let wsMarket = null;
+        let wsTrade = null;
         let currentKlineData = null;
+        let currentMode = 'demo';
 
+        // ==================== API Key 统一通道 ====================
+        // 受保护端点（下单/挂单/账户/回测/vc）需要 X-API-Key；key 存 localStorage（仅自托管本机使用）。
+        function apiKey() { return (document.getElementById('apiKeyInput').value || '').trim(); }
+
+        function saveKey() {
+            try {
+                localStorage.setItem('qt_api_key', apiKey());
+                reconnectTradeWS();
+            } catch (e) {}
+        }
+
+        function initKey() {
+            try { document.getElementById('apiKeyInput').value = localStorage.getItem('qt_api_key') || ''; } catch (e) {}
+        }
+
+        async function apiFetch(path, opts) {
+            opts = opts || {};
+            opts.headers = Object.assign({'Content-Type': 'application/json', 'X-API-Key': apiKey()}, opts.headers || {});
+            return fetch(path, opts);
+        }
+
+        function authHint() { return '<span class="err">需先在右上角填入正确的 API Key</span>'; }
+
+        // ==================== 模式切换（真实传参：simulated） ====================
         function switchMode(mode) {
             document.getElementById('demoBtn').classList.toggle('active', mode === 'demo');
             document.getElementById('liveBtn').classList.toggle('active', mode === 'live');
+            document.getElementById('liveBtn').classList.toggle('live-active', mode === 'live');
+            document.getElementById('liveConfirmRow').style.display = mode === 'live' ? '' : 'none';
+            if (mode === 'live') document.getElementById('liveConfirm').checked = false;
+            var label = mode === 'live' ? '实盘' : '模拟盘';
+            document.getElementById('tradeModeLabel').textContent = label;
+            document.getElementById('accountModeLabel').textContent = label;
+            document.getElementById('placeOrderBtn').textContent = '下单（' + label + '）';
+            document.getElementById('placeOrderBtn').classList.toggle('danger', mode === 'live');
+            currentMode = mode;
             loadTickers();
+            loadPending();
+            loadAccount();
         }
 
+        // ==================== 行情面板 ====================
         async function loadTickers() {
             try {
                 const r = await fetch('/api/tickers?inst_type=SPOT');
@@ -137,11 +231,11 @@
                     document.getElementById('tickerGrid').innerHTML = d.data.slice(0, 6).map(function(t) {
                         var ch = parseFloat(t.last) - parseFloat(t.open24h);
                         var cp = (ch / parseFloat(t.open24h) * 100).toFixed(2);
-        var cls = ch >= 0 ? 'up' : 'down';
-        return '<div class="ticker-item"><div class="symbol">' + t.instId + '</div><div class="price">$' + parseFloat(t.last).toLocaleString() + '</div><div class="' + cls + '">' + cp + '%</div></div>';
-    }).join('');
+                        var cls = ch >= 0 ? 'up' : 'down';
+                        return '<div class="ticker-item"><div class="symbol">' + t.instId + '</div><div class="price">$' + parseFloat(t.last).toLocaleString() + '</div><div class="' + cls + '">' + cp + '%</div></div>';
+                    }).join('');
                 }
-            } catch(e) {}
+            } catch (e) {}
         }
 
         async function loadKlines() {
@@ -158,10 +252,18 @@
                     klineChart = new Chart(document.getElementById('klineChart'), {
                         type: 'line',
                         data: { labels: labels, datasets: [{ label: sym, data: closes, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.08)', borderWidth: 2, fill: true, tension: 0.3 }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#666', maxTicksLimit: 10 } }, y: { ticks: { color: '#888' } } }
+                        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: '#666', maxTicksLimit: 10 } }, y: { ticks: { color: '#888' } } } }
                     });
                 }
-            } catch(e) {}
+            } catch (e) {}
+        }
+
+        function renderOrderbook(asks, bids) {
+            var h = '';
+            asks.slice(0, 5).reverse().forEach(function(a) { h += '<tr><td class="down">' + parseFloat(a[0]).toFixed(2) + '</td><td>' + parseFloat(a[1]).toFixed(4) + '</td></tr>'; });
+            h += '<tr><td colspan="2" style="text-align:center;color:#666">--- 盘口 ---</td></tr>';
+            bids.slice(0, 5).forEach(function(b) { h += '<tr><td class="up">' + parseFloat(b[0]).toFixed(2) + '</td><td>' + parseFloat(b[1]).toFixed(5) + '</td></tr>'; });
+            document.getElementById('orderbookTable').innerHTML = h;
         }
 
         async function loadOrderbook() {
@@ -170,107 +272,213 @@
                 var r = await fetch('/api/orderbook/' + sym + '?depth=5');
                 var d = await r.json();
                 if (d.code === 0 && d.data) {
-                    var asks = d.data.asks || [];
-                    var bids = d.data.bids || [];
-                    var h = '';
-                    asks.slice(0, 5).reverse().forEach(function(a) { h += '<tr><td class="down">' + parseFloat(a[0]).toFixed(2) + '</td><td>' + parseFloat(a[1]).toFixed(4) + '</td></tr>'; });
-                    h += '<tr><td colspan="2" style="text-align:center;color:#666">--- 盘口 ---</td></tr>';
-                    bids.slice(0, 5).forEach(function(b) { h += '<tr><td class="up">' + parseFloat(b[0]).toFixed(2) + '</td><td>' + parseFloat(b[1]).toFixed(5) + '</td></tr>'; });
-        document.getElementById('orderbookTable').innerHTML = h;
-    }
-            } catch(e) {}
+                    renderOrderbook(d.data.asks || [], d.data.bids || []);
+                }
+            } catch (e) {}
         }
 
+        function downloadHistory() {
+            var sym = document.getElementById('klineSymbol').value;
+            var bar = document.getElementById('klineBar').value;
+            // /api/history/download 属受保护端点，window.open 带不上 X-API-Key → fetch+blob 下载
+            apiFetch('/api/history/download?inst_id=' + sym + '&bar=' + bar + '&limit=500').then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status + (r.status === 401 ? '（需 API Key）' : ''));
+                return r.blob();
+            }).then(function(blob) {
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url; a.download = sym + '_' + bar + '.csv'; a.click();
+                URL.revokeObjectURL(url);
+            }).catch(function(e) { alert('下载失败: ' + e.message); });
+        }
+
+        // ==================== 交易执行 ====================
+        function togglePx() {
+            var needPx = document.getElementById('orderType').value !== 'market';
+            document.getElementById('orderPx').disabled = !needPx;
+        }
+
+        async function placeOrder() {
+            var sym = document.getElementById('tradeSymbol').value;
+            var ordType = document.getElementById('orderType').value;
+            var body = {
+                inst_id: sym,
+                side: document.getElementById('orderSide').value,
+                ord_type: ordType,
+                sz: document.getElementById('orderSz').value,
+                td_mode: document.getElementById('tdMode').value,
+                simulated: currentMode === 'demo',
+                confirm_live: currentMode === 'live' && document.getElementById('liveConfirm').checked
+            };
+            if (ordType !== 'market') body.px = document.getElementById('orderPx').value;
+            var box = document.getElementById('orderResult');
+            try {
+                box.textContent = '提交中...';
+                var r = await apiFetch('/api/order', {method: 'POST', body: JSON.stringify(body)});
+                var d = await r.json();
+                var head = (d.code === 0
+                    ? '<span class="up">✓ ' + (currentMode === 'demo' ? '模拟盘' : '实盘') + '下单成功（HTTP ' + r.status + '）</span>'
+                    : '<span class="err">✗ HTTP ' + r.status + '</span>');
+                box.innerHTML = head + '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
+                loadPending();
+            } catch (e) { box.innerHTML = '<span class="err">错误: ' + e + '</span>'; }
+        }
+
+        async function loadPending() {
+            var box = document.getElementById('pendingResult');
+            try {
+                var r = await apiFetch('/api/orders/pending?inst_type=SPOT');
+                if (r.status === 401 || r.status === 503) { box.innerHTML = authHint(); return; }
+                var d = await r.json();
+                if (d.code !== 0) { box.textContent = '获取失败: ' + (d.msg || r.status); return; }
+                var rows = d.data || [];
+                if (!rows.length) { box.textContent = '当前无挂单'; return; }
+                var h = '<table class="ob-table"><tr><th>时间</th><th>交易对</th><th>方向</th><th>类型</th><th>价格</th><th>数量</th><th>状态</th><th></th></tr>';
+                rows.forEach(function(o) {
+                    var ts = o.cTime ? new Date(parseInt(o.cTime)).toLocaleString() : '';
+                    var side = o.side === 'buy' ? '<span class="up">买入</span>' : '<span class="down">卖出</span>';
+                    h += '<tr><td style="white-space:nowrap">' + ts + '</td><td>' + o.instId + '</td><td>' + side + '</td><td>' + (o.ordType || '') + '</td><td>' + (o.px || '-') + '</td><td>' + (o.sz || '') + '</td><td>' + (o.state || '') + '</td><td><button class="btn danger" style="margin:0;padding:2px 10px" data-inst="' + o.instId + '" data-ord="' + o.ordId + '">撤单</button></td></tr>';
+                });
+                h += '</table>';
+                box.innerHTML = h;
+                box.querySelectorAll('button[data-ord]').forEach(function(b) {
+                    b.addEventListener('click', function() { cancelOrder(b.dataset.inst, b.dataset.ord); });
+                });
+            } catch (e) { box.textContent = '获取失败: ' + e; }
+        }
+
+        async function cancelOrder(instId, ordId) {
+            var body = { inst_id: instId, ord_id: ordId, simulated: currentMode === 'demo' };
+            var box = document.getElementById('orderResult');
+            try {
+                box.textContent = '撤单提交中...';
+                var r = await apiFetch('/api/order/cancel', {method: 'POST', body: JSON.stringify(body)});
+                var d = await r.json();
+                box.innerHTML = (d.code === 0
+                    ? '<span class="up">✓ 撤单请求已提交（' + instId + ' ' + ordId + '）</span>'
+                    : '<span class="err">✗ HTTP ' + r.status + '</span><pre>' + JSON.stringify(d, null, 2) + '</pre>');
+                setTimeout(loadPending, 800);
+            } catch (e) { box.innerHTML = '<span class="err">错误: ' + e + '</span>'; }
+        }
+
+        async function loadAccount() {
+            var box = document.getElementById('accountResult');
+            try {
+                var r = await apiFetch('/api/account/balance');
+                if (r.status === 401 || r.status === 503) { box.innerHTML = authHint(); return; }
+                var b = await r.json();
+                if (b.code !== 0) { box.textContent = '获取失败: ' + (b.msg || r.status); return; }
+                var line = '总权益: <b>$' + parseFloat(b.data.totalEq || 0).toLocaleString() + '</b>';
+                (b.data.details || []).forEach(function(x) {
+                    if (parseFloat(x.eq) > 0) line += '<br>' + x.ccy + ': ' + parseFloat(x.eqUsd || x.eq).toLocaleString();
+                });
+                var r2 = await apiFetch('/api/account/positions?inst_type=SWAP');
+                if (r2.status === 200) {
+                    var p = await r2.json();
+                    if (p.code === 0) (p.data || []).forEach(function(pos) {
+                        line += '<br>持仓 ' + pos.instId + ' ' + (pos.posSide || '') + ' ' + pos.pos + ' @ ' + (pos.avgPx || '-');
+                    });
+                }
+                box.innerHTML = line;
+            } catch (e) { box.textContent = '获取失败: ' + e; }
+        }
+
+        // ==================== 指标 / 回测 ====================
         async function calculateIndicators() {
             var indicator = document.getElementById('indicatorSelect').value;
             var period = parseInt(document.getElementById('indicatorPeriod').value);
             var sym = document.getElementById('klineSymbol').value;
-    var bar = document.getElementById('klineBar').value;
-    try {
-        var body = { inst_id: sym, bar: bar, indicators: [indicator], limit: '100' };
-        var r = await fetch('/api/indicators/calculate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-        var d = await r.json();
-        if (d.code === 0 && d.data) {
-        var recent = d.data.slice(-5).reverse();
-        var html = recent.map(function(row) {
-            var val = row[indicator] !== undefined ? row[indicator].toFixed(4) : 'N/A';
-        var ts = row.ts ? new Date(row.ts).toLocaleDateString() : '';
-        return '<div class="ind-item"><div class="name">' + ts + '</div><div class="val">' + val + '</div></div>';
-        }).join('');
-        document.getElementById('indicatorGrid').innerHTML = html;
-    }
-    } catch(e) { document.getElementById('indicatorGrid').innerHTML = '<div class="ind-item"><div class="name">计算失败</div></div>'; }
-}
-
-async function runBacktest() {
-    var body = { inst_id: document.getElementById('klineSymbol').value, bar: document.getElementById('klineBar').value, strategy: document.getElementById('strategySelect').value, params: { fast: parseInt(document.getElementById('param1').value), slow: parseInt(document.getElementById('param2').value) }, limit: '300' };
-    try {
-        var r = await fetch('/api/backtest', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-        var result = await r.json();
-        document.getElementById('backtestResult').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
-    } catch(e) { document.getElementById('backtestResult').innerHTML = '错误: ' + e; }
-}
-
-async function loadAGIStatus() {
-    try {
-        var r = await fetch('/api/vc/agi/status');
-        var d = await r.json();
-        if (d.code === 0) { document.getElementById('agiStatus').textContent = d.data.status || 'unknown'; }
-    } catch(e) {}
-}
-
-async function triggerEvolve() {
-    try {
-        var r = await fetch('/api/vc/agi/evolve', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}' });
-        var d = await r.json();
-        document.getElementById('agiResult').innerHTML = '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
-    } catch(e) { document.getElementById('agiResult').innerHTML = '错误: ' + e; }
-}
-
-async function triggerLearn() {
-    try {
-        var r = await fetch('/api/vc/github/learn', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({n_repos: 3}) });
-        var d = await r.json();
-        document.getElementById('learnResult').innerHTML = '<pre>Found ' + d.count + ' repos</pre>';
-    } catch(e) { document.getElementById('learnResult').innerHTML = '错误: ' + e; }
-}
-
-async function loadRiskStatus() {
-    try {
-        var r = await fetch('/api/vc/risk/status');
-    var d = await r.json();
-    if (d.code === 0 && d.data) {
-        if (d.data.limits) {
-            document.getElementById('riskMaxPos').textContent = (d.data.limits.max_position_pct * 100).toFixed(0) + '%';
-            document.getElementById('riskMaxDD').textContent = (d.data.limits.max_drawdown_pct * 100).toFixed(0) + '%';n        }
-        if (d.data.current_drawdown !== undefined) {
-            document.getElementById('riskCurrentDD').textContent = (d.data.current_drawdown * 100).toFixed(1) + '%';
+            var bar = document.getElementById('klineBar').value;
+            try {
+                var body = { inst_id: sym, bar: bar, indicators: [indicator], limit: '100' };
+                var r = await apiFetch('/api/indicators/calculate', {method: 'POST', body: JSON.stringify(body)});
+                var d = await r.json();
+                if (d.code === 0 && d.data) {
+                    var recent = d.data.slice(-5).reverse();
+                    var html = recent.map(function(row) {
+                        var val = row[indicator] !== undefined ? row[indicator].toFixed(4) : 'N/A';
+                        var ts = row.ts ? new Date(row.ts).toLocaleDateString() : '';
+                        return '<div class="ind-item"><div class="name">' + ts + '</div><div class="val">' + val + '</div></div>';
+                    }).join('');
+                    document.getElementById('indicatorGrid').innerHTML = html;
+                }
+            } catch (e) { document.getElementById('indicatorGrid').innerHTML = '<div class="ind-item"><div class="name"><span class="err">计算失败</span></div></div>'; }
         }
-    }
-    } catch(e) {}
-}
 
-async function loadNexus() {
-    try {
-        var r = await fetch('/api/vc/memory/nexus');
-        var d = document.getElementById('nexusResult');
-        var rj = await r.json();
-        if (rj.code === 0) {
-            document.getElementById('nexusCount').textContent = rj.count + ' files';
-            d.innerHTML = rj.data.map(function(f) { return f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)'; }).join('<br>');
+        async function runBacktest() {
+            var body = { inst_id: document.getElementById('klineSymbol').value, bar: document.getElementById('klineBar').value, strategy: document.getElementById('strategySelect').value, params: { fast: parseInt(document.getElementById('param1').value), slow: parseInt(document.getElementById('param2').value) }, limit: '300' };
+            try {
+                var r = await apiFetch('/api/backtest', {method: 'POST', body: JSON.stringify(body)});
+                if (r.status === 401 || r.status === 503) { document.getElementById('backtestResult').innerHTML = authHint(); return; }
+                var result = await r.json();
+                document.getElementById('backtestResult').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+            } catch (e) { document.getElementById('backtestResult').innerHTML = '<span class="err">错误: ' + e + '</span>'; }
         }
-    } catch(e) {}
-}
 
-function downloadHistory() {
-    var sym = document.getElementById('klineSymbol').value;
-    var bar = document.getElementById('klineBar').value;
-    window.open('/api/history/download?inst_id=' + sym + '&bar=' + bar + '&limit=500', '_blank');
-}
+        // ==================== vc 智能层 ====================
+        async function loadAGIStatus() {
+            try {
+                var r = await apiFetch('/api/vc/agi/status');
+                if (r.status === 401 || r.status === 503) { document.getElementById('agiStatus').innerHTML = '<span class="err">需Key</span>'; return; }
+                var d = await r.json();
+                if (d.code === 0) { document.getElementById('agiStatus').textContent = d.data.status || d.data.error || 'unknown'; }
+            } catch (e) {}
+        }
+
+        async function triggerEvolve() {
+            try {
+                var r = await apiFetch('/api/vc/agi/evolve', {method: 'POST', body: '{}'});
+                if (r.status === 401 || r.status === 503) { document.getElementById('agiResult').innerHTML = authHint(); return; }
+                var d = await r.json();
+                document.getElementById('agiResult').innerHTML = '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
+            } catch (e) { document.getElementById('agiResult').innerHTML = '<span class="err">错误: ' + e + '</span>'; }
+        }
+
+        async function triggerLearn() {
+            try {
+                var r = await apiFetch('/api/vc/github/learn', {method: 'POST', body: JSON.stringify({n_repos: 3})});
+                if (r.status === 401 || r.status === 503) { document.getElementById('learnResult').innerHTML = authHint(); return; }
+                var d = await r.json();
+                document.getElementById('learnResult').innerHTML = '<pre>Found ' + d.count + ' repos</pre>';
+            } catch (e) { document.getElementById('learnResult').innerHTML = '<span class="err">错误: ' + e + '</span>'; }
+        }
+
+        async function loadRiskStatus() {
+            try {
+                var r = await apiFetch('/api/vc/risk/status');
+                if (r.status === 401 || r.status === 503) { document.getElementById('riskCurrentDD').innerHTML = '<span class="err">需Key</span>'; return; }
+                var d = await r.json();
+                if (d.code === 0 && d.data) {
+                    if (d.data.limits) {
+                        document.getElementById('riskMaxPos').textContent = (d.data.limits.max_position_pct * 100).toFixed(0) + '%';
+                        document.getElementById('riskMaxDD').textContent = (d.data.limits.max_drawdown_pct * 100).toFixed(0) + '%';
+                    }
+                    if (d.data.current_drawdown !== undefined) {
+                        document.getElementById('riskCurrentDD').textContent = (d.data.current_drawdown * 100).toFixed(1) + '%';
+                    }
+                }
+            } catch (e) {}
+        }
+
+        async function loadNexus() {
+            try {
+                var r = await apiFetch('/api/vc/memory/nexus');
+                if (r.status === 401 || r.status === 503) { document.getElementById('nexusResult').innerHTML = authHint(); return; }
+                var d = document.getElementById('nexusResult');
+                var rj = await r.json();
+                if (rj.code === 0) {
+                    document.getElementById('nexusCount').textContent = rj.count + ' files';
+                    d.innerHTML = rj.data.map(function(f) { return f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)'; }).join('<br>');
+                }
+            } catch (e) {}
+        }
+
+        // ==================== WebSocket（行情 + 私有推送） ====================
+        function wsProto() { return location.protocol === 'https:' ? 'wss:' : 'ws:'; }
 
         function connectWebSocket() {
             var sym = document.getElementById('klineSymbol').value;
-            var wsUrl = 'ws://localhost:8000/ws/market?inst_id=' + sym;
+            var wsUrl = wsProto() + '//' + location.host + '/ws/market?inst_id=' + sym;
             try {
                 wsMarket = new WebSocket(wsUrl);
                 wsMarket.onopen = function() {
@@ -279,33 +487,79 @@ function downloadHistory() {
                 };
                 wsMarket.onmessage = function(event) {
                     try {
-                        var data = JSON.parse(event.data);
-                        if (data.last) {
+                        var d = JSON.parse(event.data);
+                        // OKX v5 帧形：{arg:{channel,instId}, data:[...]}（旧版对 data.last 的直接判断从未命中）
+                        if (!d.arg || !d.data || !d.data[0]) return;
+                        var row = d.data[0];
+                        if (d.arg.channel === 'tickers' && row.last) {
                             var items = document.getElementsByClassName('ticker-item');
                             for (var i = 0; i < items.length; i++) {
-                                if (items[i].querySelector('.symbol').textContent === sym) {
-                                    items[i].querySelector('.price').textContent = '$' + parseFloat(data.last).toLocaleString();
+                                if (items[i].querySelector('.symbol').textContent === d.arg.instId) {
+                                    items[i].querySelector('.price').textContent = '$' + parseFloat(row.last).toLocaleString();
                                 }
                             }
                         }
-                    } catch(e) {}
+                        if (d.arg.channel === 'books5' && row.asks) {
+                            renderOrderbook(row.asks || [], row.bids || []);
+                        }
+                    } catch (e) {}
                 };
                 wsMarket.onclose = function() {
                     document.getElementById('wsDot').classList.remove('connected');
-    document.getElementById('wsText').textContent = '已断开';
+                    document.getElementById('wsText').textContent = '已断开';
                     setTimeout(connectWebSocket, 10000);
                 };
-            } catch(e) {}
+            } catch (e) {}
         }
 
+        function reconnectTradeWS() {
+            if (wsTrade) {
+                try { wsTrade.onclose = null; wsTrade.close(); } catch (e) {}
+                wsTrade = null;
+            }
+            var key = apiKey();
+            if (!key) {
+                document.getElementById('wsTradeText').textContent = '私有WS未连接';
+                return;
+            }
+            try {
+                // 浏览器无法为 WS 握手自定义请求头：受保护 /ws/trade 的凭据走 query 参数
+                wsTrade = new WebSocket(wsProto() + '//' + location.host + '/ws/trade?api_key=' + encodeURIComponent(key));
+                wsTrade.onopen = function() {
+                    document.getElementById('wsTradeDot').classList.add('connected');
+                    document.getElementById('wsTradeText').textContent = '私有WS连接';
+                };
+                wsTrade.onmessage = function(event) {
+                    try {
+                        var d = JSON.parse(event.data);
+                        var ch = (d.arg && d.arg.channel) || d.event || 'push';
+                        var payload = d.data ? JSON.stringify(d.data[0] || d.data) : JSON.stringify(d).slice(0, 160);
+                        var ts = new Date().toLocaleTimeString();
+                        var box = document.getElementById('tradePushResult');
+                        box.innerHTML = '<div class="push-line">[' + ts + '] ' + ch + ': ' + payload + '</div>' + box.innerHTML;
+                    } catch (e) {}
+                };
+                wsTrade.onclose = function(ev) {
+                    document.getElementById('wsTradeDot').classList.remove('connected');
+                    document.getElementById('wsTradeText').textContent = '私有WS已断开(' + ev.code + ')';
+                    setTimeout(reconnectTradeWS, 15000);
+                };
+            } catch (e) {}
+        }
+
+        // ==================== 初始化 ====================
+        initKey();
         loadTickers();
         loadKlines();
         loadOrderbook();
         loadAGIStatus();
         loadRiskStatus();
+        loadPending();
+        loadAccount();
         setInterval(loadTickers, 10000);
         setInterval(loadOrderbook, 5000);
         setTimeout(connectWebSocket, 2000);
+        setTimeout(reconnectTradeWS, 2600);
     </script>
 </body>
 </html>

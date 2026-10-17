@@ -10,7 +10,9 @@
 """
 
 import re
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _INST_ID_RE = r'^[A-Za-z0-9-]{3,30}$'
 _BAR_RE = r'^[0-9]{1,3}[smHDWM]$'
@@ -56,3 +58,36 @@ class VcBacktestRequest(_RequestBase):
     bar: str = Field('1D', pattern=_BAR_RE, description='K线周期，如 1H/1D/15m（默认 1D，与历史行为一致）')
     params: dict = Field(default_factory=dict, description='策略参数')
     limit: str = Field('300', pattern=_LIMIT_RE, description='K线根数')
+
+
+class OrderRequest(_RequestBase):
+    """POST /api/order 请求体（交易闭环阶段）
+
+    只放行 OKX 贴现必填形态：数量/价格走数字字符串；limit 单必须带 px；
+    simulated=true（模拟盘）为默认，false=实盘且必须 confirm_live=true。
+    """
+
+    inst_id: str = Field(..., pattern=_INST_ID_RE, description='交易对，如 BTC-USDT')
+    side: str = Field(..., pattern=r'^(buy|sell)$', description='方向')
+    ord_type: str = Field('limit', pattern=r'^(limit|market|post_only|fok|ioc)$',
+                          description='订单类型（与 OKXTradeService.VALID_ORD_TYPES 对齐）')
+    sz: str = Field(..., pattern=r'^[0-9]{1,16}(\.[0-9]{1,8})?$', description='数量（数字字符串，如 0.01）')
+    px: Optional[str] = Field(None, pattern=r'^[0-9]{1,12}(\.[0-9]{1,8})?$',
+                              description='价格（limit/post_only 必填）')
+    td_mode: str = Field('cash', pattern=r'^(cash|cross|isolated)$', description='交易模式')
+    simulated: bool = Field(True, description='true=模拟盘（默认）；false=实盘需 confirm_live=true')
+    confirm_live: bool = Field(False, description='实盘下单确认开关')
+
+    @model_validator(mode='after')
+    def _limit_needs_px(self) -> 'OrderRequest':
+        if self.ord_type == 'limit' and self.px is None:
+            raise ValueError('limit 订单必须提供 px')
+        return self
+
+
+class CancelOrderRequest(_RequestBase):
+    """POST /api/order/cancel 请求体"""
+
+    inst_id: str = Field(..., pattern=_INST_ID_RE, description='交易对，如 BTC-USDT')
+    ord_id: str = Field(..., pattern=r'^[A-Za-z0-9-]{1,40}$', description='OKX 订单 ID')
+    simulated: bool = Field(True, description='true=模拟盘（默认）')

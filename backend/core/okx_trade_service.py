@@ -273,15 +273,23 @@ class OKXTradeService:
             await self._ws_private.close()
 
 
-# 线程安全单例
-_trade_service = None
-_trade_service_lock = threading.Lock()
+# 线程安全按模式缓存：模拟盘/实盘各持有独立实例
+# （SDK client 的 sandbox/x-simulated-trading 头在构造期绑定，不可热切换，故按模式分桶）
+_trade_services = {}
+_trade_services_lock = threading.Lock()
 
 
 def get_trade_service(simulated=None):
-    global _trade_service
-    if _trade_service is None:
-        with _trade_service_lock:
-            if _trade_service is None:
-                _trade_service = OKXTradeService(simulated=simulated)
-    return _trade_service
+    """获取交易服务实例。
+
+    simulated=None 时跟随 OKX_SIMULATED 环境变量；同一模式复用缓存实例，
+    不同模式返回不同实例（实盘与模拟盘的请求头沙箱标记互不串扰）。
+    """
+    if simulated is None:
+        simulated = os.getenv('OKX_SIMULATED', '1') == '1'
+    with _trade_services_lock:
+        svc = _trade_services.get(simulated)
+        if svc is None:
+            svc = OKXTradeService(simulated=simulated)
+            _trade_services[simulated] = svc
+        return svc

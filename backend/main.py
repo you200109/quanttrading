@@ -4,9 +4,11 @@ FastAPI 主应用入口
 - 配置 CORS 跨域
 - 启动 WebSocket 端点
 """
+import hmac
 import os
 import logging
-from fastapi import FastAPI, Request
+from urllib.parse import parse_qs
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -14,7 +16,7 @@ from dotenv import load_dotenv
 
 from backend.api.routes import router
 from backend.api.vc_routes import router as vc_router
-from backend.core.auth import auth_middleware
+from backend.core.auth import auth_middleware, get_api_key, is_protected
 from backend.core.resilience import graceful_shutdown, resource_limiter
 from backend.core.observability import start_trace, end_trace, get_dashboard_data, get_trace_records, get_trace_stats, get_alert_history
 
@@ -48,6 +50,41 @@ app.add_middleware(
 
 # API Key 认证中间件
 app.middleware('http')(auth_middleware)
+
+
+class WebSocketAuthMiddleware:
+    """WebSocket 鉴权（默认拒绝）：受保护的 /ws/* 路径要求 query string 上
+    携带 api_key=API_AUTH_KEY。
+
+    浏览器无法为 WebSocket 握手自定义请求头，故受保护 WS 的凭据走 query
+    （仅限自托管内网使用场景）；公开路径（/ws/market）放行，其余 /ws/* 拒绝。
+    密钥未配置时拒绝连接（自定义 close code 4503），密钥错误为 4401，
+    与 HTTP 侧 503/401 语义对齐。
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] == 'websocket' and is_protected(scope.get('path', '')):
+            params = parse_qs(scope.get('query_string', b'').decode('latin-1'))
+            provided = params.get('api_key', [''])[0]
+            expected = get_api_key()
+            if not expected:
+                close_code = 4503   # 服务端未配置密钥
+            elif not provided or not hmac.compare_digest(provided, expected):
+                close_code = 4401   # 未带或错误密钥
+            else:
+                close_code = None
+            if close_code is not None:
+                ws = WebSocket(scope, receive=receive, send=send)
+                await ws.accept()
+                await ws.close(code=close_code)
+                return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(WebSocketAuthMiddleware)
 
 # 链路追踪中间件
 @app.middleware('http')

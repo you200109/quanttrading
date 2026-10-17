@@ -1,7 +1,7 @@
 """导入链验证：确认 FastAPI 服务（backend.main）可完整导入，
 且其导入链满足以下不变量（P1 清障后的回归保护）：
 
-1. backend.main 可导入（含全部 28 路由注册）
+1. backend.main 可导入（含全部路由注册）
 2. 服务导入链不引入 vigilant-couscous.data.*（fetcher/cache_manager/
    portfolio_manager/live_trader 仅被 vc 内部使用；服务对 nexus 的
    访问走 vc_routes 的直接文件读写，已带三层路径防护）
