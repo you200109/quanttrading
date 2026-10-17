@@ -7,6 +7,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -16,6 +17,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      PAGES_URL: https://you200109.github.io/quanttrading
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,8 +28,12 @@ jobs:
           cache-dependency-path: research/requirements.txt
       - run: pip install -r research/requirements.txt
       - run: python research/nightly.py
+      - run: python research/lifecycle_run.py
         env:
-          PAGES_URL: https://you200109.github.io/quanttrading
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          KILL_SWITCH: ${{ vars.KILL_SWITCH }}
+          APPROVED_PARAMS: ${{ vars.APPROVED_PARAMS }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

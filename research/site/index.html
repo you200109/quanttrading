@@ -36,6 +36,7 @@ footer{color:var(--muted);font-size:.8rem;margin-top:1.5rem}
 <p class="sub" id="sub">加载中…</p>
 <p id="err"></p>
 <div class="verdict" id="verdict" hidden></div>
+<div class="verdict" id="stage" hidden></div>
 <div class="chart"><canvas id="c"></canvas></div>
 <dl id="m"></dl>
 <h2>历史记录（最近 30 天）</h2>
@@ -52,6 +53,9 @@ Promise.all([get('data/report.json'),get('data/history.json')]).then(([r,h])=>{
   $('#sub').textContent=`${r.symbol} · ${r.timeframe} · ${r.bars} 根K线 · 更新于 ${r.generated_at.replace('T',' ').slice(0,16)} UTC`;
   const v=$('#verdict');v.hidden=false;v.className='verdict'+(r.gate.passed?' ok':'');
   v.innerHTML=`<b>${r.gate.passed?'通过检查，等待人工审核':'未通过检查，不会进入模拟盘'}</b><span>规则：${r.gate.rule}</span>`;
+  const L=r.lifecycle||{stage:'candidate',streak:0},N={candidate:'候选',paper:'前向模拟盘',ready_for_review:'等待人工批准',approved:'已批准（小资金试运行）',halted:'已暂停（总开关）'};
+  const g=$('#stage');g.hidden=false;g.className='verdict'+(L.stage==='approved'||L.stage==='ready_for_review'?' ok':'');
+  g.innerHTML=`<b>阶段：${N[L.stage]||L.stage}</b><span>${L.frozen?'冻结参数 '+L.frozen+'，开始于 '+L.paper_start+(L.forward?`，前向收益 ${f(L.forward.return_pct,'%')}，回撤 ${f(L.forward.max_drawdown_pct,'%')}`:''):'连续通过 '+L.streak+' / 3 天'}</span>`;
   new Chart($('#c'),{type:'line',data:{labels:r.equity.t,datasets:[
     {label:`策略 SMA(${r.params.fast},${r.params.slow})`,data:r.equity.strategy,borderColor:css('--strat'),borderWidth:2,pointRadius:0},
     {label:'买入持有',data:r.equity.buy_hold,borderColor:css('--bench'),borderWidth:1.5,pointRadius:0,borderDash:[5,4]}]},
