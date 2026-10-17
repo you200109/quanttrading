@@ -29,7 +29,7 @@ pandas==2.3.3
 pandas-ta==0.4.71b0
 APScheduler==3.11.3
 websocket-client==1.9.0
-ccxt==4.5.85
+ccxt==4.5.87
 
 # --- 开发/测试工具（与 pyproject.toml optional-dependencies.dev 对齐） ---
 pytest==9.1.1
