@@ -27,6 +27,10 @@ jobs:
           cache: pip
           cache-dependency-path: research/requirements.txt
       - run: pip install -r research/requirements.txt
+      - name: Carry over leaderboard from the live site
+        run: |
+          mkdir -p research/site/data
+          curl -fsS "$PAGES_URL/data/leaderboard.json" -o /tmp/lb.json && mv /tmp/lb.json research/site/data/leaderboard.json || true
       - run: python research/nightly.py
       - run: python research/lifecycle_run.py
         env:

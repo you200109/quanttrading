@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>策略排行榜</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏁%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#eef1f5;--panel:#fff;--ink:#101828;--muted:#58627a;--line:#d9dee7;--ok:#0b7a4b;--no:#a15c00;--bench:#8b95a8;--c0:#1d4ed8;--c1:#0b7a4b;--c2:#a15c00;--c3:#7c3aed}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1218;--panel:#151b24;--ink:#e7ebf2;--muted:#9aa5b8;--line:#263040;--ok:#4fdc9b;--no:#f0b45a;--bench:#6d788c;--c0:#7aa7ff;--c1:#4fdc9b;--c2:#f0b45a;--c3:#c4a1ff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,"PingFang SC","Noto Sans SC","Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:860px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 18px 40px}
+h1{font-size:1.35rem;margin:.2rem 0}
+.sub{color:var(--muted);margin:0 0 1.2rem;font-size:.92rem}
+a{color:var(--c0)}
+.verdict{padding:12px 14px;border-left:4px solid var(--no);background:var(--panel);margin-bottom:1rem}
+.verdict.ok{border-color:var(--ok)}.verdict b{display:block}.verdict span{color:var(--muted);font-size:.88rem}
+.chart{background:var(--panel);padding:12px;height:300px;margin-bottom:1rem}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--panel);font-size:.9rem}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:500}
+footer{color:var(--muted);font-size:.8rem;margin-top:1.5rem}
+#err{color:var(--no)}
+</style>
+</head>
+<body>
+<main>
+<h1>策略排行榜</h1>
+<p class="sub"><span id="sub">加载中…</span> · <a href="index.html">返回每夜报告</a></p>
+<p id="err"></p>
+<div class="verdict" id="verdict" hidden></div>
+<div class="chart"><canvas id="c"></canvas></div>
+<div class="wrap"><table id="t"></table></div>
+<footer id="foot"></footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const f=(v,u='')=>v==null?'—':v+u;
+const NAME={sma:'均线交叉',rsi:'RSI 反转',bbands:'布林带回归',breakout:'通道突破'};
+fetch('data/leaderboard.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(d=>{
+  const m=d.method,any=d.rows.some(r=>r.passed);
+  $('#sub').textContent=`${d.symbol} · ${d.timeframe} · ${d.bars} 根K线 · 样本外 ${m.oos_years} 年 · ${d.generated_at.slice(0,10)}`;
+  const v=$('#verdict');v.hidden=false;v.className='verdict'+(any?' ok':'');
+  v.innerHTML=`<b>${any?'有策略超过统计门槛':'没有策略超过统计门槛'}</b><span>门槛：夏普 ≥ ${d.hurdle}（比较的策略越多、数据越短，门槛越高）。买入持有：收益 ${f(d.buy_hold.return_pct,'%')}，夏普 ${f(d.buy_hold.sharpe)}</span>`;
+  const ds=d.rows.map((r,i)=>({label:NAME[r.name]||r.name,data:d.equity[r.name],borderColor:css('--c'+i),borderWidth:2,pointRadius:0}));
+  ds.push({label:'买入持有',data:d.equity.buy_hold,borderColor:css('--bench'),borderWidth:1.5,borderDash:[5,4],pointRadius:0});
+  new Chart($('#c'),{type:'line',data:{labels:d.equity.t,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:css('--muted')}}},scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:6},grid:{display:false}},y:{ticks:{color:css('--muted')},grid:{color:css('--line')}}}}});
+  $('#t').innerHTML='<tr><th>策略</th><th>样本外夏普</th><th>收益</th><th>最大回撤</th><th>交易</th><th>结果</th></tr>'+
+    d.rows.map(r=>`<tr><td>${NAME[r.name]||r.name}</td><td>${f(r.oos_sharpe)}</td><td>${f(r.oos_return_pct,'%')}</td><td>${f(r.oos_max_dd_pct,'%')}</td><td>${r.trades}</td><td>${r.passed?'超过门槛':'未超过'}</td></tr>`).join('');
+  $('#foot').textContent=`方法：${m.folds} 折扩展窗口，每折每个策略 Optuna 搜索 ${m.trials_per_fold} 次，只在之后未见过的数据上评估；${m.note}。已计入手续费和滑点。仅供研究，不构成投资建议。`;
+}).catch(e=>{$('#sub').textContent='';$('#err').textContent='还没有数据，请先在 Actions 里手动运行 research-search。（'+e+'）'});
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+name: research-search
+on:
+  schedule:
+    - cron: "41 3 * * 0"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  issues: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      PAGES_URL: https://you200109.github.io/quanttrading
+      TIMEFRAME: "1d"
+      BARS: "1500"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: research/requirements.txt
+      - run: pip install -r research/requirements.txt
+      - name: Carry over nightly data from the live site
+        run: |
+          mkdir -p research/site/data
+          for f in report history state; do
+            curl -fsS "$PAGES_URL/data/$f.json" -o "/tmp/$f.json" && mv "/tmp/$f.json" "research/site/data/$f.json" || true
+          done
+      - run: python research/search.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: research/site
+      - id: deploy
+        uses: actions/deploy-pages@v4
