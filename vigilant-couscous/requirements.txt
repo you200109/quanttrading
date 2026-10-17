@@ -24,7 +24,7 @@ httpx==0.28.1
 requests==2.34.2
 pydantic==2.12.5
 PyYAML==6.0.3
-numpy==2.2.6
+numpy==2.5.4
 pandas==2.3.3
 pandas-ta==0.4.71b0
 APScheduler==3.11.3
