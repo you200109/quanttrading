@@ -1,0 +1,16 @@
+name: research-ci
+on:
+  push:
+    paths: ["research/**", "tests/test_research_*.py", ".github/workflows/research-ci.yml"]
+  pull_request:
+    paths: ["research/**", "tests/test_research_*.py", ".github/workflows/research-ci.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest pandas numpy
+      - run: pytest tests/test_research_strategy.py -q

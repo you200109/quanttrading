@@ -1,0 +1,4 @@
+ccxt>=4.3
+numpy<2
+pandas>=1.5,<2.2
+vectorbt>=0.26.2,<0.29

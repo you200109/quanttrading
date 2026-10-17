@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuantTrading 每夜研究报告</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📈%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#eef1f5;--panel:#fff;--ink:#101828;--muted:#58627a;--line:#d9dee7;--strat:#1d4ed8;--bench:#8b95a8;--ok:#0b7a4b;--no:#a15c00}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1218;--panel:#151b24;--ink:#e7ebf2;--muted:#9aa5b8;--line:#263040;--strat:#7aa7ff;--bench:#6d788c;--ok:#4fdc9b;--no:#f0b45a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,"PingFang SC","Noto Sans SC","Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:860px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 18px 40px}
+h1{font-size:1.35rem;margin:.2rem 0 .2rem}
+.sub{color:var(--muted);margin:0 0 1.2rem;font-size:.92rem}
+.verdict{padding:12px 14px;border-left:4px solid var(--no);background:var(--panel);margin-bottom:1rem}
+.verdict.ok{border-color:var(--ok)}
+.verdict b{display:block}
+.verdict span{color:var(--muted);font-size:.88rem}
+.chart{background:var(--panel);padding:12px;height:300px;margin-bottom:1rem}
+dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);margin:0 0 1.4rem}
+dl div{background:var(--panel);padding:10px 12px}
+dt{color:var(--muted);font-size:.82rem}dd{margin:0;font-size:1.15rem;font-weight:600}
+h2{font-size:1rem;margin:1.2rem 0 .5rem}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--panel);font-size:.9rem}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:500}
+footer{color:var(--muted);font-size:.8rem;margin-top:1.5rem}
+#err{color:var(--no)}
+</style>
+</head>
+<body>
+<main>
+<h1>每夜研究报告</h1>
+<p class="sub" id="sub">加载中…</p>
+<p id="err"></p>
+<div class="verdict" id="verdict" hidden></div>
+<div class="chart"><canvas id="c"></canvas></div>
+<dl id="m"></dl>
+<h2>历史记录（最近 30 天）</h2>
+<div class="wrap"><table id="h"></table></div>
+<footer>数据来自 OKX 公开行情，回测已计入手续费和滑点。仅供研究，不构成投资建议。通过检查的策略仍需人工批准后才能进入实盘。</footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const f=(v,u='')=>v==null?'—':v+u;
+const get=async p=>{const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw new Error(p+'（'+r.status+'）');return r.json()};
+Promise.all([get('data/report.json'),get('data/history.json')]).then(([r,h])=>{
+  $('#sub').textContent=`${r.symbol} · ${r.timeframe} · ${r.bars} 根K线 · 更新于 ${r.generated_at.replace('T',' ').slice(0,16)} UTC`;
+  const v=$('#verdict');v.hidden=false;v.className='verdict'+(r.gate.passed?' ok':'');
+  v.innerHTML=`<b>${r.gate.passed?'通过检查，等待人工审核':'未通过检查，不会进入模拟盘'}</b><span>规则：${r.gate.rule}</span>`;
+  new Chart($('#c'),{type:'line',data:{labels:r.equity.t,datasets:[
+    {label:`策略 SMA(${r.params.fast},${r.params.slow})`,data:r.equity.strategy,borderColor:css('--strat'),borderWidth:2,pointRadius:0},
+    {label:'买入持有',data:r.equity.buy_hold,borderColor:css('--bench'),borderWidth:1.5,pointRadius:0,borderDash:[5,4]}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:css('--muted')}}},
+      scales:{x:{ticks:{color:css('--muted'),maxTicksLimit:6},grid:{display:false}},y:{ticks:{color:css('--muted')},grid:{color:css('--line')}}}}});
+  const t=r.test,tr=r.train;
+  $('#m').innerHTML=[['样本外收益',f(t.return_pct,'%')],['买入持有收益',f(r.buy_hold_return_pct,'%')],['样本外夏普',f(t.sharpe)],
+    ['样本内夏普',f(tr.sharpe)],['最大回撤',f(t.max_drawdown_pct,'%')],['交易次数',f(t.trades)]]
+    .map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
+  $('#h').innerHTML='<tr><th>日期</th><th>参数</th><th>样本外收益</th><th>夏普</th><th>买入持有</th><th>检查</th></tr>'+
+    h.slice(-30).reverse().map(x=>`<tr><td>${x.date}</td><td>${x.fast}/${x.slow}</td><td>${f(x.test_return_pct,'%')}</td><td>${f(x.test_sharpe)}</td><td>${f(x.buy_hold_return_pct,'%')}</td><td>${x.passed?'通过':'未通过'}</td></tr>`).join('');
+}).catch(e=>{$('#sub').textContent='';$('#err').textContent='还没有数据。请先在 Actions 里手动运行 research-nightly。（'+e.message+'）'});
+</script>
+</body>
+</html>
