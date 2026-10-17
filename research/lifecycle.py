@@ -9,7 +9,7 @@ from datetime import date
 
 from agent_utils import create_issue
 
-STREAK_TO_PAPER = 3       # consecutive passing nights with the same params
+STREAK_TO_PAPER = 2       # weekly searches in a row that the same family passes
 MIN_PAPER_DAYS = 14       # forward-test length before asking a human
 MAX_DRAWDOWN_PCT = -10.0  # demote at or below this
 MAX_LAG_PCT = 15.0        # demote if this far behind buy-and-hold
@@ -36,7 +36,12 @@ def demotion_reason(fwd):
     return None
 
 
-def step(state, passed, params, fwd, kill, approved, today):
+def step(state, passed, params, fwd, kill, approved, today, fresh=True, frozen_id=None):
+    """params = strategy family seen this time; frozen_id = full id to freeze on promotion.
+
+    fresh=False means no new evidence arrived (same weekly search as last time),
+    so the candidate streak is left alone.
+    """
     s, ev = dict(state), []
     if kill:
         if s["stage"] != "halted":
@@ -47,15 +52,17 @@ def step(state, passed, params, fwd, kill, approved, today):
         s.update(FRESH)
         ev.append("总开关已恢复，从候选阶段重新开始")
     if s["stage"] == "candidate":
-        if not passed:
-            s.update(params=None, streak=0)
-        elif params == s["params"]:
-            s["streak"] += 1
-        else:
-            s.update(params=params, streak=1)
+        if fresh:
+            if not passed:
+                s.update(params=None, streak=0)
+            elif params == s["params"]:
+                s["streak"] += 1
+            else:
+                s.update(params=params, streak=1)
         if s["streak"] >= STREAK_TO_PAPER:
-            s.update(stage="paper", frozen=params, paper_start=today)
-            ev.append(f"策略 {params} 连续 {STREAK_TO_PAPER} 天通过检查，进入前向模拟盘")
+            frozen = frozen_id or params
+            s.update(stage="paper", frozen=frozen, paper_start=today)
+            ev.append(f"策略 {frozen} 连续 {STREAK_TO_PAPER} 次周搜索通过门槛，进入前向模拟盘")
     else:
         reason = demotion_reason(fwd)
         if reason:
@@ -65,7 +72,8 @@ def step(state, passed, params, fwd, kill, approved, today):
             elapsed = (date.fromisoformat(today) - date.fromisoformat(s["paper_start"])).days
             if s["stage"] == "paper" and elapsed >= MIN_PAPER_DAYS:
                 s["stage"] = "ready_for_review"
-                ev.append(f"策略 {s['frozen']} 前向模拟满 {MIN_PAPER_DAYS} 天且未触发红线，等待人工批准")
+                ev.append(f"策略 {s['frozen']} 前向模拟满 {MIN_PAPER_DAYS} 天且未触发红线，等待人工批准。"
+                          f"批准方法：新建 Actions 变量 APPROVED_PARAMS，值填 {s['frozen']}")
             if s["stage"] == "ready_for_review" and approved == s["frozen"]:
                 s["stage"] = "approved"
                 ev.append(f"策略 {s['frozen']} 已由人工批准（仅记录，系统不会自动下实盘单）")
